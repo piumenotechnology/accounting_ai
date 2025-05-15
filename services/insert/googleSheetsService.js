@@ -2,9 +2,12 @@ const { google } = require('googleapis');
 const path = require('path');
 require('dotenv').config();
 
-// Authenticate Google Sheets API
+const credentials = JSON.parse(
+  Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, 'base64').toString('utf8')
+);
+
 const auth = new google.auth.GoogleAuth({
-  keyFile: path.join(__dirname, '..', process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+  credentials,
   scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
 });
 
