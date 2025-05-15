@@ -3,18 +3,18 @@ const app = express();
 require('dotenv').config();
 const { connectRedis } = require('./services/redisClient');
 
-// connectRedis(); // 🔌 Connect to Redis
+connectRedis(); // 🔌 Connect to Redis
 
 // Import Routes
-// const chatRoutes = require('./routes/chatRoutes');
-// const importRoutes = require('./routes/importRoutes');
+const chatRoutes = require('./routes/chatRoutes');
+const importRoutes = require('./routes/importRoutes');
 const {fetchAllSheetsData} = require('./services/insert/googleSheetsService')
 
 // Middleware
 app.use(express.json());
 
 // API Routes
-// app.use('/chat', chatRoutes);
+app.use('/chat', chatRoutes);
 // app.use('/import', importRoutes);
 
 app.get('/checkSheet', async(req, res)=> {
