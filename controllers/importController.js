@@ -7,6 +7,9 @@ async function handleImport(req, res) {
     console.log('⚡ Starting Import...');
 
     const rawData = await fetchAllSheetsData(); // Fetch data from Google Sheets
+
+    console.log('data 1')
+
     const mappedData = mapSheetsData(rawData); // Map the data to the correct format
     await insertMappedData(mappedData); // Insert the mapped data into the database
 
