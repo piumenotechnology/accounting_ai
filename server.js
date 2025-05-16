@@ -1,7 +1,10 @@
 const express = require('express');
 const app = express();
+const cors = require('cors')
 require('dotenv').config();
 const { connectRedis } = require('./services/redisClient');
+
+app.use(cors());
 
 connectRedis(); // 🔌 Connect to Redis
 
