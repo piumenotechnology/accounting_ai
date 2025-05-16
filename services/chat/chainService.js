@@ -3,7 +3,7 @@ const { runSQL } = require('../databaseService');
 const { getChatHistory, getSessionMetadata, setSessionMetadata } = require('./memoryService'); // Make sure these are available
 
 const tableSchemas = {
-  closed_deal: 'closed_deal(dealname, amount, amount_in_home_currency, closedate, dealtype, company_name, conference_code)',
+  closed_deal: 'closed_deal(dealname, amount, amount_in_home_currency, closedate, dealtype, company_name, conference_code, hs_is_closed_won (True/False))',
   invoice: 'invoice(invoice_number, invoice_date, currency, customer_name, amount_cad)',
   payment: 'payment(supplier_invoices, payment_date, currency, detail, amount_cad, vendor_name, amount)',
   ap: 'ap(date, transaction_type, card, supplier, due_date, amount, open_balance, foreign_amount, foreign_open_balance, currency, exchange_rate)',
@@ -43,8 +43,6 @@ async function loadChain(session_id) {
       content: m.content
     }));
 
-    console.log('Chat History:', chatML);
-
     // STEP 1: Generate SQL
     const sqlPrompt = [
       {
@@ -78,6 +76,8 @@ async function loadChain(session_id) {
     } catch (err) {
       sqlError = err.message;
     }
+
+    console.log('⚡ SQL Result:', result);
 
     const hasData =
       Array.isArray(result) &&
