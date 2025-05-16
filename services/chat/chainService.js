@@ -52,7 +52,7 @@ async function loadChain(session_id) {
           Only reference this table:
           - ${tableSchema}
 
-          Use LIKE "%value%" for text. Do not explain. Return raw SQL only.
+          Use LIKE "%value%" for text but not in date type. Do not explain. Return raw SQL only.
         `.trim()
       },
       ...chatML,
