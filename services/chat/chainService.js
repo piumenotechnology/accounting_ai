@@ -12,7 +12,7 @@
 
 // const tableDescriptions = {
 //   closed_deal: 'Tracks closed sales deals such as sponsorships and delegate registrations.',
-//   invoice: 'Contains invoices issued to customers, with details like invoice number, date, customer name, and billed amount.',
+//   invoice: 'Contains invoices issued to customers, with details ilike  invoice number, date, customer name, and billed amount.',
 //   payment: 'Captures outgoing payments to vendors, including invoice references, vendor names, payment details, and dates.',
 //   ap: 'Tracks accounts payable — amounts we owe suppliers — including due dates and foreign balances.',
 //   ar: 'Tracks accounts receivable — amounts customers owe — including due dates, currencies, and outstanding balances.'
@@ -55,8 +55,8 @@
 //           - ${tableSchema}
 
 //           ❗ Important:
-//           - Use BETWEEN or >= and < for dates (not LIKE)
-//           - Use LIKE '%string%' only on text columns
+//           - Use BETWEEN or >= and < for dates (not ilike )
+//           - Use ilike  '%string%' only on text columns
 //           - NEVER explain anything
 //           - NEVER summarize
 //           - NEVER return markdown or extra text — just SQL
@@ -191,7 +191,7 @@
 
 // const tableDescriptions = {
 //   closed_deal: 'Tracks closed sales deals such as sponsorships and delegate registrations.',
-//   invoice: 'Contains invoices issued to customers, with details like invoice number, date, customer name, and billed amount.',
+//   invoice: 'Contains invoices issued to customers, with details ilike  invoice number, date, customer name, and billed amount.',
 //   payment: 'Captures outgoing payments to vendors, including invoice references, vendor names, payment details, and dates.',
 //   ap: 'Tracks accounts payable — amounts we owe suppliers — including due dates and foreign balances.',
 //   ar: 'Tracks accounts receivable — amounts customers owe — including due dates, currencies, and outstanding balances.'
@@ -288,7 +288,7 @@
           
 //           Guidelines:
 //           - Use BETWEEN or >= and < for date ranges
-//           - Use LIKE '%term%' for case-insensitive text search
+//           - Use ilike  '%term%' for case-insensitive text search
 //           - Use appropriate aggregations (SUM, COUNT, AVG) when needed
 //           - Consider GROUP BY for categorical breakdowns
 //           - Use ORDER BY for meaningful sorting
@@ -427,7 +427,7 @@ const tableSchemas = {
 
 const tableDescriptions = {
   closed_deal: 'Tracks closed sales deals such as sponsorships and delegate registrations.',
-  invoice: 'Contains invoices issued to customers, with details like invoice number, date, customer name, and billed amount.',
+  invoice: 'Contains invoices issued to customers, with details ilike  invoice number, date, customer name, and billed amount.',
   payment: 'Captures outgoing payments to vendors, including invoice references, vendor names, payment details, and dates.',
   ap: 'Tracks accounts payable — amounts we owe suppliers — including due dates and foreign balances.',
   ar: 'Tracks accounts receivable — amounts customers owe — including due dates, currencies, and outstanding balances.'
@@ -625,7 +625,7 @@ async function loadChain(session_id) {
             Schema: ${tableSchema}
 
             Query Guidelines:
-            - Use LIKE for case-insensitive text search '%string%'
+            - Use ilike  for case-insensitive text search '%string%' use proper wildcard patterns for partial ILIKE usage example: hubspot_owner_name ilike any (array['%mitch%', '%shah%'])
             - Use proper date formatting: '2024-01-01'::date
             - Add LIMIT 100 for safety unless user wants specific count
             - Use meaningful column aliases

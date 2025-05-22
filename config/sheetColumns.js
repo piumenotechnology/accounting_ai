@@ -59,5 +59,31 @@ module.exports = {
       'hs_is_closed_won',
       'hubspot_owner_name'
     ],
+    lead:[
+      'amount',
+      'amount_in_home_currency',
+      'closedate',
+      'hs_closed_amount',
+      'hs_closed_amount_in_home_currency',
+      'days_to_close',
+      'description',
+      'dealname',	
+      'dealtype',
+      'notes_last_updated',
+      'notes_last_contacted',	
+      'num_notes',	
+      'hs_analytics_source',	
+      'hs_analytics_source_data_1',	
+      'hs_analytics_source_data_2',	
+      'hs_sales_email_last_replied'	,
+      'conference_code',	
+      'company_name',	
+      'conference_group',	
+      'conference_internal_name',	
+      'deal_age',	
+      'hs_is_closed_won',	
+      'hubspot_owner_name',	
+      'dealstage_name'										
+    ]
   
   };
