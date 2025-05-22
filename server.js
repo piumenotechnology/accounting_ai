@@ -19,7 +19,7 @@ app.use(express.json());
 
 // API Routes
 app.use('/chat', chatRoutes);
-// app.use('/import', importRoutes);
+app.use('/import', importRoutes);
 
 app.get('/checkSheet', async(req, res)=> {
   try {

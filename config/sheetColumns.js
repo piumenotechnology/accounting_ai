@@ -56,7 +56,8 @@ module.exports = {
       'company_name',
       'conference_code',
       'conference_internal_name',
-      'hs_is_closed_won'
+      'hs_is_closed_won',
+      'hubspot_owner_name'
     ],
   
   };
