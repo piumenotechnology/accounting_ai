@@ -422,8 +422,8 @@ const tableSchemas = {
   lead: 'lead(amount, amount_in_home_currency, closedate, hs_closed_amount, hs_closed_amount_in_home_currency, days_to_close, description, dealname, dealtype, notes_last_updated, notes_last_contacted, num_notes, hs_analytics_source, hs_analytics_source_data_1, hs_analytics_source_data_2, hs_sales_email_last_replied, conference_code, company_name, conference_group, conference_internal_name, deal_age, hs_is_closed_won, hubspot_owner_name, dealstage_name)',
   invoice: 'invoice(invoice_number, invoice_date, currency, customer_name, amount_cad)',
   payment: 'payment(supplier_invoices, payment_date, currency, detail, amount_cad, vendor_name, amount)',
-  ap: 'ap(date, transaction_type, card, supplier, due_date, amount, open_balance, foreign_amount, foreign_open_balance, currency, exchange_rate)',
-  ar: 'ar(date, transaction_type, card, customer, due_date, amount, open_balance, foreign_amount, foreign_open_balance, curency, exchange_rate)'
+  ap: 'ap(date, transaction_type, invoice_number, supplier, due_date, amount, open_balance, foreign_amount, foreign_open_balance, currency, exchange_rate)',
+  ar: 'ar(date, transaction_type, invoice_number, customer, due_date, amount, open_balance, foreign_amount, foreign_open_balance, curency, exchange_rate)'
 };
 
 

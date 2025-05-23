@@ -18,7 +18,7 @@ module.exports = {
     ap: [
       'date',
       'transaction_type',
-      'temp',
+      'invoice_number',
       'supplier',
       'due_date',
       'past_due',
@@ -32,7 +32,7 @@ module.exports = {
     ar: [
       'date',
       'transaction_type',
-      'temp',
+      'invoice_number',
       'customer',
       'due_date',
       'amount',
