@@ -735,33 +735,58 @@ async function loadChain(session_id) {
       }
 
       // STEP 6: Generate enhanced summary with insights
+      // const summaryPrompt = [
+      //   {
+      //     role: 'system',
+      //     content: `
+      //       You are a business data analyst. Create clear, actionable insights from SQL results.
+            
+      //       Context:
+      //       - Table: ${selectedTable} (${tablePurpose})
+      //       - Question: "${input}"
+      //       - Records found: ${analysis.recordCount || 0}
+      //       - Has numeric data: ${analysis.hasNumericData}
+            
+      //       Guidelines:
+      //       - Lead with the key answer to their question
+      //       - Include specific numbers and percentages
+      //       - Highlight patterns or notable findings  
+      //       - Use business language, not technical terms
+      //       - Be concise but comprehensive
+      //       - If error occurred, explain it simply
+      //     `.trim()
+      //   },
+      //   { role: 'user', content: input },
+      //   {
+      //     role: 'assistant',
+      //     content: sqlError 
+      //       ? `Query error: ${sqlError}`
+      //       : `Analysis: ${JSON.stringify({ results: result, insights: analysis.insights })}`
+      //   }
+      // ];
+
       const summaryPrompt = [
         {
           role: 'system',
           content: `
-            You are a business data analyst. Create clear, actionable insights from SQL results.
+            Answer the user's question directly and briefly.
             
-            Context:
-            - Table: ${selectedTable} (${tablePurpose})
-            - Question: "${input}"
-            - Records found: ${analysis.recordCount || 0}
-            - Has numeric data: ${analysis.hasNumericData}
-            
-            Guidelines:
-            - Lead with the key answer to their question
-            - Include specific numbers and percentages
-            - Highlight patterns or notable findings  
-            - Use business language, not technical terms
-            - Be concise but comprehensive
-            - If error occurred, explain it simply
+            Rules:
+            - Start with the direct answer to their question
+            - Keep it short - 2-3 sentences max
+            - Use simple business language
+            - Include key numbers when relevant
+            - No technical jargon or database terms
+            - If no data found, just say "No results found"
+            - If error, say "Unable to retrieve data"
           `.trim()
         },
         { role: 'user', content: input },
         {
           role: 'assistant',
           content: sqlError 
-            ? `Query error: ${sqlError}`
-            : `Analysis: ${JSON.stringify({ results: result, insights: analysis.insights })}`
+            ? `Error retrieving data`
+            : `Results: ${JSON.stringify(result)}`
         }
       ];
 
