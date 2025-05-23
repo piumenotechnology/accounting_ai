@@ -480,21 +480,21 @@ async function selectBestTable(question, chatHistory = [], sessionMetadata = {})
 
   // Pattern-based pre-filtering
   const patternMatches = [];
- for (const [pattern, keywords] of Object.entries(BUSINESS_PATTERNS)) {
-    if (keywords.some(keyword => questionLower.includes(keyword))) {
-      switch (pattern) {
-        case 'revenue': patternMatches.push('closed_deal'); break;
-        case 'pipeline': patternMatches.push('lead'); break;
-        case 'conversion': patternMatches.push('lead', 'closed_deal'); break;
-        case 'sources': patternMatches.push('lead'); break;
-        case 'activities': patternMatches.push('lead'); break;
-        case 'expenses': patternMatches.push('payment'); break;
-        case 'customers': patternMatches.push('ar', 'invoice'); break;
-        case 'suppliers': patternMatches.push('ap', 'payment'); break;
-        case 'outstanding': patternMatches.push('ar', 'ap'); break;
+  for (const [pattern, keywords] of Object.entries(BUSINESS_PATTERNS)) {
+      if (keywords.some(keyword => questionLower.includes(keyword))) {
+        switch (pattern) {
+          case 'revenue': patternMatches.push('closed_deal'); break;
+          case 'pipeline': patternMatches.push('lead'); break;
+          case 'conversion': patternMatches.push('lead', 'closed_deal'); break;
+          case 'sources': patternMatches.push('lead'); break;
+          case 'activities': patternMatches.push('lead'); break;
+          case 'expenses': patternMatches.push('payment'); break;
+          case 'customers': patternMatches.push('ar', 'invoice'); break;
+          case 'suppliers': patternMatches.push('ap', 'payment'); break;
+          case 'outstanding': patternMatches.push('ar', 'ap'); break;
+        }
       }
     }
-  }
 
   const candidateTables = patternMatches.length > 0 ? 
     [...new Set(patternMatches)] : Object.keys(tableSchemas);
@@ -691,6 +691,7 @@ async function loadChain(session_id) {
           )
         ]);
         const executionTime = Date.now() - startTime;
+        console.log('result:', result);
         console.log(`✅ Query executed in ${executionTime}ms`);
       } catch (err) {
         sqlError = err.message;
