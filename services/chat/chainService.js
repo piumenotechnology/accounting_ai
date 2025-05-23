@@ -735,7 +735,7 @@ async function loadChain(session_id) {
         return message;
       }
 
-      STEP 6: Generate enhanced summary with insights
+      // STEP 6: Generate enhanced summary with insights
       const summaryPrompt = [
         {
           role: 'system',
