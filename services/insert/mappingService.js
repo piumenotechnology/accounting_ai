@@ -51,11 +51,11 @@ function mapSheetsData(allSheetsData) {
     const normalizedSheet = sheetName.toLowerCase().replace(/\s+/g, '_'); // Normalize sheet name
 
     const excludeSheets = [
-      'closed_deal',
-      'ar',
-      'payment',
-      'invoice',
-      'ap'
+      // 'closed_deal',
+      // 'ar',
+      // 'payment',
+      // 'invoice',
+      // 'ap'
     ];
 
     if (excludeSheets.includes(normalizedSheet)) {
