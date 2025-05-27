@@ -32,6 +32,10 @@ function mapSheetsData(allSheetsData) {
           value = null;
         }
 
+        if (sheetName.toLowerCase() === 'lead'  && normalizedKey === 'dealstage_name') {
+          value = value.replace(/[0-9.]/g, '');
+        }
+
         if (value === undefined || value === '') {
           clean[normalizedKey] = null;
         }else if (typeof value === 'string') {
@@ -51,11 +55,12 @@ function mapSheetsData(allSheetsData) {
     const normalizedSheet = sheetName.toLowerCase().replace(/\s+/g, '_'); // Normalize sheet name
 
     const excludeSheets = [
-      // 'closed_deal',
-      // 'ar',
-      // 'payment',
-      // 'invoice',
-      // 'ap'
+      'closed_deal',
+      // 'lead',
+      'ar',
+      'payment',
+      'invoice',
+      'ap'
     ];
 
     if (excludeSheets.includes(normalizedSheet)) {
