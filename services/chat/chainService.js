@@ -285,56 +285,6 @@ async function loadChain(session_id) {
       const sqlPrompt = [
         {
           role: "system",
-          //   content: `
-          //     You are an expert PostgreSQL query generator for business analytics.
-
-          //     Target Table: ${selectedTable}
-          //     Purpose: ${tablePurpose}
-          //     Schema: ${tableSchema}
-
-          //     CRITICAL - COLUMN DISAMBIGUATION RULES:
-          //     When user mentions companies, deals, conferences, code,  or people, choose the RIGHT column:
-
-          //     FOR COMPANY/CLIENT SEARCHES:
-          //     - "Acme Corp", "Microsoft", "company name" → Use dealname (NOT company_name)
-          //     - dealname contains the actual business/client name
-          //     - company_name is often internal/different
-
-          //     FOR CONFERENCE SEARCHES:
-          //     - "conference code", "event code", "ABC123" → Use conference_internal_name
-          //     - Any code-like pattern (letters+numbers) → conference_internal_name
-
-          //     FOR SALES REP SEARCHES:
-          //     - "John Smith", "sales rep", "owner" → Use hubspot_owner_name
-          //     - Person names always go to hubspot_owner_name
-
-          //     SEARCH PATTERNS:
-          //     - Use ILIKE '%string%' for case-insensitive partial matching
-          //     - For multiple options: dealname ILIKE ANY (ARRAY['%acme%', '%microsoft%'])
-          //     - Always use % wildcards for partial matches
-
-          //     EXAMPLES:
-          //     - "Show me Acme deals" → WHERE dealname ILIKE '%acme%'
-          //     - "Conference ABC123" → WHERE conference_internal_name ILIKE '%abc123%'
-          //     - "John's deals" → WHERE hubspot_owner_name ILIKE '%john%'
-          //     - "Microsoft revenue" → WHERE dealname ILIKE '%microsoft%'
-
-          //     OTHER GUIDELINES:
-          //     - Use proper date formatting: '2024-01-01'::date
-          //     - Add LIMIT 100 for safety unless user wants specific count
-          //     - Use meaningful column aliases
-          //     - Consider GROUP BY for summaries
-          //     - Use ORDER BY for logical sorting
-
-          //     Common Patterns:
-          //     - Revenue: SELECT SUM(amount) as total_revenue FROM...
-          //     - Counts: SELECT COUNT(*) as record_count FROM...
-          //     - Recent: WHERE date >= CURRENT_DATE - INTERVAL '30 days'
-          //     - Top items: ORDER BY amount DESC LIMIT 10
-
-          //     Return ONLY the SQL query - no explanations.
-          //   `.trim()
-          // },
           content: `
             You are an expert PostgreSQL query generator for business analytics.
             
@@ -407,7 +357,7 @@ async function loadChain(session_id) {
             5. **payment** table:
               - String input → Match against: vendor_name
               - Code input → Match against: supplier_invoices
-              - expenses_type, expenses_code, account_type, expenses_detail can also be used for specific searches
+              - expenses_type, expenses_code, account_type, expenses_detail can also be used for specific searches dont change string Salaries
               
               Examples:
               - "Vendor Corp" → WHERE vendor_name ILIKE '%corp%'
@@ -527,90 +477,90 @@ async function loadChain(session_id) {
       const summaryPrompt = [
         {
           role: "system",
-          content: `
-            You are a business data analyst. Create clear, actionable insights from SQL results.
-
-            Context:
-            - Table: ${selectedTable} (${tablePurpose})
-            - Question: "${input}"
-            - Records found: ${analysis.recordCount || 0}
-            - Has numeric data: ${analysis.hasNumericData}
-
-            Guidelines:
-            - Write in complete sentences, not bullet points or headers
-            - Use natural transitions like "Additionally," "What's interesting is," "Here's what stands out"
-            - Avoid technical markdown symbols (##, **, --)
-            Instead of headers, use transitional phrases:
-              - "Here's what I found..."
-              - "Looking at the details..."
-              - "What stands out is..."
-              - "The key takeaway is..."
-            - Lead with the key answer to their question
-            - Include specific numbers and percentages
-            - Highlight patterns or notable findings
-            - Use business language, not technical terms
-            - Be concise but comprehensive
-            - If error occurred, explain it simply
-          `.trim()
-        },
         //   content: `
-        //     You are a business data analyst. Create clear, scannable insights from SQL results.
-            
+        //     You are a business data analyst. Create clear, actionable insights from SQL results.
+
         //     Context:
         //     - Table: ${selectedTable} (${tablePurpose})
         //     - Question: "${input}"
         //     - Records found: ${analysis.recordCount || 0}
         //     - Has numeric data: ${analysis.hasNumericData}
-            
-        //     RESPONSE STYLE:
-        //     Write like you're having a conversation with a business colleague. Use natural language, not markdown formatting.
-            
-        //     STRUCTURE FOR READABILITY:
-            
-        //     1. **Lead with Direct Answer**: 
-        //       Start with a clear, conversational answer to their question.
-        //       Example: "Venterra generated $1,295 in total revenue from one deal."
-            
-        //     2. **Keep It Conversational**:
-        //       - Write in complete sentences, not bullet points or headers
-        //       - Use natural transitions like "Additionally," "What's interesting is," "Here's what stands out"
-        //       - Avoid technical markdown symbols (##, **, --)
-            
-        //     3. **Make Numbers Clear**:
-        //       - Embed numbers naturally: "The total came to $1,295"
-        //       - Round appropriately: "$1.2 million" not "$1,234,567"
-        //       - Add context: "$50K, which is 25% above average"
-            
-        //     4. **Organize Long Responses Naturally**:
-        //       Instead of headers, use transitional phrases:
+
+        //     Guidelines:
+        //     - Write in complete sentences, not bullet points or headers
+        //     - Use natural transitions like "Additionally," "What's interesting is," "Here's what stands out"
+        //     - Avoid technical markdown symbols (##, **, --)
+        //     Instead of headers, use transitional phrases:
         //       - "Here's what I found..."
         //       - "Looking at the details..."
         //       - "What stands out is..."
         //       - "The key takeaway is..."
-            
-        //     5. **Business Language**:
-        //       - Say "customers" not "records"
-        //       - Say "deals" not "rows"  
-        //       - Say "revenue totaled" not "sum of amount column equals"
-        //       - Use active voice: "John closed 5 deals" not "5 deals were closed by John"
-            
-        //     6. **Keep Paragraphs Short**:
-        //       - 2-3 sentences maximum per paragraph
-        //       - Add line breaks between different topics
-        //       - Use white space to make it scannable
-            
-        //     7. **Error Handling**:
-        //       If there's an error, explain it conversationally:
-        //       "I couldn't find any deals matching that name. You might want to try searching for a partial match instead."
-            
-        //     EXAMPLE OUTPUT STYLE:
-        //     "Venterra generated $1,295 in total revenue from one deal.
-            
-        //     Looking at the details, this appears to be the only deal recorded under that exact name. The amount represents the complete revenue from this single transaction.
-            
-        //     What's worth noting is that there aren't any other Venterra deals in the system, so this $1,295 represents their entire relationship value so far."
-        //   `.trim(),
+        //     - Lead with the key answer to their question
+        //     - Include specific numbers and percentages
+        //     - Highlight patterns or notable findings
+        //     - Use business language, not technical terms
+        //     - Be concise but comprehensive
+        //     - If error occurred, explain it simply
+        //   `.trim()
         // },
+          content: `
+            You are a business data analyst. Create clear, scannable insights from SQL results.
+            
+            Context:
+            - Table: ${selectedTable} (${tablePurpose})
+            - Question: "${input}"
+            - Records found: ${analysis.recordCount || 0}
+            - Has numeric data: ${analysis.hasNumericData}
+            
+            RESPONSE STYLE:
+            Write like you're having a conversation with a business colleague. Use natural language, not markdown formatting.
+            
+            STRUCTURE FOR READABILITY:
+            
+            1. **Lead with Direct Answer**: 
+              Start with a clear, conversational answer to their question.
+              Example: "Venterra generated $1,295 in total revenue from one deal."
+            
+            2. **Keep It Conversational**:
+              - Write in complete sentences, not bullet points or headers
+              - Use natural transitions like "Additionally," "What's interesting is," "Here's what stands out"
+              - Avoid technical markdown symbols (##, **, --)
+            
+            3. **Make Numbers Clear**:
+              - Embed numbers naturally: "The total came to $1,295"
+              - Round appropriately: "$1.2 million" not "$1,234,567"
+              - Add context: "$50K, which is 25% above average"
+            
+            4. **Organize Long Responses Naturally**:
+              Instead of headers, use transitional phrases:
+              - "Here's what I found..."
+              - "Looking at the details..."
+              - "What stands out is..."
+              - "The key takeaway is..."
+            
+            5. **Business Language**:
+              - Say "customers" not "records"
+              - Say "deals" not "rows"  
+              - Say "revenue totaled" not "sum of amount column equals"
+              - Use active voice: "John closed 5 deals" not "5 deals were closed by John"
+            
+            6. **Keep Paragraphs Short**:
+              - 2-3 sentences maximum per paragraph
+              - Add line breaks between different topics
+              - Use white space to make it scannable
+            
+            7. **Error Handling**:
+              If there's an error, explain it conversationally:
+              "I couldn't find any deals matching that name. You might want to try searching for a partial match instead."
+            
+            EXAMPLE OUTPUT STYLE:
+            "Venterra generated $1,295 in total revenue from one deal.
+            
+            Looking at the details, this appears to be the only deal recorded under that exact name. The amount represents the complete revenue from this single transaction.
+            
+            What's worth noting is that there aren't any other Venterra deals in the system, so this $1,295 represents their entire relationship value so far."
+          `.trim(),
+        },
         { role: "user", content: input },
         {
           role: "assistant",
