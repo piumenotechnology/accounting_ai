@@ -306,6 +306,7 @@ async function loadChain(session_id) {
             - Company names (Acme, Microsoft) → Use deal/customer/client name columns  
             - Codes (ABC123, INV-001) → Use ID/code columns
             - Amounts/dates → Use numeric/date columns
+            - how much we pay for Sponsorship Commissions in 2025 ? -> string search "%Sponsorship Commissions%"
 
             STEP 3 - TABLE-SPECIFIC COLUMN MATCHING:
             When user mentions search terms, choose the RIGHT columns based on table type and input pattern:
@@ -357,7 +358,9 @@ async function loadChain(session_id) {
             5. **payment** table:
               - String input → Match against: vendor_name
               - Code input → Match against: supplier_invoices
-              - expenses_type, expenses_code, account_type, expenses_detail can also be used for specific searches dont change string Salaries
+              - expenses_type, expenses_code, account_type, expenses_detail can also be used for specific searches dont change string Salaries 
+              - when seaching expenses_type include expenses_detail like expenses_type ilike '%Salaries%' OR expenses_detail ILIKE '%Salaries%'
+                
               
               Examples:
               - "Vendor Corp" → WHERE vendor_name ILIKE '%corp%'
