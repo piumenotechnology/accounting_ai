@@ -13,7 +13,11 @@ module.exports = {
       'detail',
       // 'amount_cad',
       'vendor_name',
-      'amount'
+      'amount',
+      'expenses_type',
+      'expenses_code',
+      'account_type',
+      'expenses_detail'
     ],
     ap: [
       'date',

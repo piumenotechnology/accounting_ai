@@ -1,36 +1,43 @@
 const { openai } = require("../openaiService");
 const { runSQL } = require("../databaseService");
+const fs = require('fs');
 const {
   getChatHistory,
   getSessionMetadata,
   setSessionMetadata,
 } = require("./memoryService");
 
+
+function writeToLogFile(logMessage) {
+  const timestamp = new Date().toISOString();
+  const logEntry = `${timestamp} - ${logMessage}\n`;
+
+  fs.appendFile('app.log', logEntry, (err) => {
+    if (err) {
+      console.error('Error writing to log file:', err);
+    }
+  });
+}
+
 const tableSchemas = {
-  closed_deal:
-    "closed_deal(amount, amount_in_home_currency, closedate, hs_closed_amount, dealname, dealtype, initial_traffic_source,	traffic_source_detail_or_entry_point, company_name, conference_internal_name, hs_is_closed_won, hubspot_owner_name)", //conference_code,
+  closed_deal:"closed_deal(amount, amount_in_home_currency, closedate, hs_closed_amount, dealname, dealtype, initial_traffic_source,	traffic_source_detail_or_entry_point, company_name, conference_internal_name, hs_is_closed_won, hubspot_owner_name)", //conference_code,
   lead: "lead(amount, amount_in_home_currency, hs_closed_amount, hs_closed_amount_in_home_currency, createdate, days_to_close, conference_internal_name,  dealname, dealtype, notes_last_updated, notes_last_contacted, num_notes, initial_traffic_source, traffic_source_detail_or_entry_point, hs_sales_email_last_replied, company_name, conference_group, hs_is_closed_won, hubspot_owner_name, dealstage_name)", //closedate, conference_code
-  invoice:
-    "invoice(invoice_number, invoice_date, currency, customer_name, amount_cad)",
-  payment:
-    "payment(supplier_invoices, payment_date, currency, detail, amount_cad, vendor_name, amount)",
+  invoice:"invoice(invoice_number, invoice_date, currency, customer_name, amount_cad)",
+  payment:"payment(supplier_invoices, payment_date, currency, detail, amount_cad, vendor_name, amount,expenses_type,expenses_code,account_type,expenses_detail)",
   ap: "ap(date, transaction_type, invoice_number, supplier, due_date, amount, open_balance, foreign_amount, foreign_open_balance, currency, exchange_rate)",
   ar: "ar(date, transaction_type, invoice_number, customer, due_date, amount, open_balance, foreign_amount, foreign_open_balance, curency, exchange_rate)",
 };
 
 const tableDescriptions = {
-  closed_deal:
-    "Tracks closed sales deals such as sponsorships and delegate registrations.",
+  closed_deal:"Tracks closed sales deals such as sponsorships and delegate registrations.",
   lead: "Tracks active sales opportunities and pipeline deals that are not yet closed, including deal stages, sources, and sales activities.",
-  invoice:
-    "Contains invoices issued to customers, with details like invoice number, date, customer name, and billed amount.",
-  payment:
-    "Captures outgoing payments to vendors, including invoice references, vendor names, payment details, and dates.",
+  invoice:"Contains invoices issued to customers, with details like invoice number, date, customer name, and billed amount.",
+  payment:"Captures outgoing payments to vendors, including invoice references, vendor names, payment details, and dates.",
   ap: "Tracks accounts payable — amounts we owe suppliers — including due dates and foreign balances.",
   ar: "Tracks accounts receivable — amounts customers owe — including due dates, currencies, and outstanding balances.",
 };
 
-// NEW: Question intent classification
+//Question intent classification
 const QUESTION_INTENTS = {
   AGGREGATION: "sum, total, count, average, how much, how many",
   COMPARISON: "compare, vs, versus, difference, higher, lower, best, worst",
@@ -39,7 +46,7 @@ const QUESTION_INTENTS = {
   STATUS: "outstanding, overdue, pending, paid, unpaid",
 };
 
-// NEW: Common business patterns
+//Common business patterns
 const BUSINESS_PATTERNS = {
   revenue: ["sales", "revenue", "income", "earnings", "closed deals"],
   pipeline: [
@@ -68,7 +75,7 @@ function cleanSQL(text) {
     .trim();
 }
 
-// ENHANCED: Multi-factor table selection
+//Multi-factor table selection
 async function selectBestTable(
   question,
   chatHistory = [],
@@ -181,7 +188,7 @@ async function selectBestTable(
   return selectedTable;
 }
 
-// NEW: SQL validation and optimization
+//SQL validation and optimization
 function validateAndOptimizeSQL(sql, tableName) {
   const issues = [];
   const suggestions = [];
@@ -209,7 +216,7 @@ function validateAndOptimizeSQL(sql, tableName) {
   return { issues, suggestions, isValid: issues.length === 0 };
 }
 
-// NEW: Result analysis and insights
+//Result analysis and insights
 function analyzeResults(results, question, tableName) {
   if (!Array.isArray(results) || results.length === 0) {
     return { isEmpty: true, insights: [] };
@@ -250,7 +257,7 @@ function analyzeResults(results, question, tableName) {
   };
 }
 
-// ENHANCED: Main chain with error recovery
+//Main chain with error recovery
 async function loadChain(session_id) {
   const chatHistory = getChatHistory(session_id);
 
@@ -360,17 +367,18 @@ async function loadChain(session_id) {
             TABLE-SPECIFIC MATCHING:
 
             1. **closed_deal** or **lead** tables:
-              - String input (companies/people) → Match against: dealname, hubspot_owner_name, company_name
+              - String input (companies/people) → Match against: company_name, dealname, hubspot_owner_name
               - Code input (conference codes) → Match against: conference_internal_name
 
               for lead table, also consider dealstage_name 
               
               Examples:
-              - "Acme Corp deals" → WHERE dealname ILIKE '%acme%'
+              - "Acme Corp deals" → WHERE company_name ILIKE '%acme%'
               - "what is deal for mitch?" → SELECT * FROM table WHERE hubspot_owner_name ILIKE '%mitch%'
               - "John's deals" → WHERE hubspot_owner_name ILIKE '%john%'
-              - "show me Microsoft revenue" → WHERE dealname ILIKE '%microsoft%'
+              - "show me Microsoft revenue" → WHERE company_name ILIKE '%microsoft%'
               - "Conference ABC123" → WHERE conference_internal_name ILIKE '%abc123%'
+              - "revenue for Sponsorship-WaitWell" → WHERE dealname ILIKE '%sponsorship-waitwell%'
 
             2. **ap** (Accounts Payable) table:
               - String input → Match against: supplier
@@ -399,6 +407,7 @@ async function loadChain(session_id) {
             5. **payment** table:
               - String input → Match against: vendor_name
               - Code input → Match against: supplier_invoices
+              - expenses_type, expenses_code, account_type, expenses_detail can also be used for specific searches
               
               Examples:
               - "Vendor Corp" → WHERE vendor_name ILIKE '%corp%'
@@ -468,9 +477,7 @@ async function loadChain(session_id) {
             setTimeout(() => reject(new Error("Query timeout")), 30000)
           ),
         ]);
-        const executionTime = Date.now() - startTime;
-        console.log("result:", result);
-        console.log(`✅ Query executed in ${executionTime}ms`);
+
       } catch (err) {
         sqlError = err.message;
         console.error("❌ SQL Error:", sqlError);
@@ -520,82 +527,90 @@ async function loadChain(session_id) {
       const summaryPrompt = [
         {
           role: "system",
-          //   content: `
-          //     You are a business data analyst. Create clear, actionable insights from SQL results.
-
-          //     Context:
-          //     - Table: ${selectedTable} (${tablePurpose})
-          //     - Question: "${input}"
-          //     - Records found: ${analysis.recordCount || 0}
-          //     - Has numeric data: ${analysis.hasNumericData}
-
-          //     Guidelines:
-          //     - Lead with the key answer to their question
-          //     - Include specific numbers and percentages
-          //     - Highlight patterns or notable findings
-          //     - Use business language, not technical terms
-          //     - Be concise but comprehensive
-          //     - If error occurred, explain it simply
-          //   `.trim()
-          // },
           content: `
-            You are a business data analyst. Create clear, scannable insights from SQL results.
-            
+            You are a business data analyst. Create clear, actionable insights from SQL results.
+
             Context:
             - Table: ${selectedTable} (${tablePurpose})
             - Question: "${input}"
             - Records found: ${analysis.recordCount || 0}
             - Has numeric data: ${analysis.hasNumericData}
-            
-            RESPONSE STYLE:
-            Write like you're having a conversation with a business colleague. Use natural language, not markdown formatting.
-            
-            STRUCTURE FOR READABILITY:
-            
-            1. **Lead with Direct Answer**: 
-              Start with a clear, conversational answer to their question.
-              Example: "Venterra generated $1,295 in total revenue from one deal."
-            
-            2. **Keep It Conversational**:
-              - Write in complete sentences, not bullet points or headers
-              - Use natural transitions like "Additionally," "What's interesting is," "Here's what stands out"
-              - Avoid technical markdown symbols (##, **, --)
-            
-            3. **Make Numbers Clear**:
-              - Embed numbers naturally: "The total came to $1,295"
-              - Round appropriately: "$1.2 million" not "$1,234,567"
-              - Add context: "$50K, which is 25% above average"
-            
-            4. **Organize Long Responses Naturally**:
-              Instead of headers, use transitional phrases:
+
+            Guidelines:
+            - Write in complete sentences, not bullet points or headers
+            - Use natural transitions like "Additionally," "What's interesting is," "Here's what stands out"
+            - Avoid technical markdown symbols (##, **, --)
+            Instead of headers, use transitional phrases:
               - "Here's what I found..."
               - "Looking at the details..."
               - "What stands out is..."
               - "The key takeaway is..."
-            
-            5. **Business Language**:
-              - Say "customers" not "records"
-              - Say "deals" not "rows"  
-              - Say "revenue totaled" not "sum of amount column equals"
-              - Use active voice: "John closed 5 deals" not "5 deals were closed by John"
-            
-            6. **Keep Paragraphs Short**:
-              - 2-3 sentences maximum per paragraph
-              - Add line breaks between different topics
-              - Use white space to make it scannable
-            
-            7. **Error Handling**:
-              If there's an error, explain it conversationally:
-              "I couldn't find any deals matching that name. You might want to try searching for a partial match instead."
-            
-            EXAMPLE OUTPUT STYLE:
-            "Venterra generated $1,295 in total revenue from one deal.
-            
-            Looking at the details, this appears to be the only deal recorded under that exact name. The amount represents the complete revenue from this single transaction.
-            
-            What's worth noting is that there aren't any other Venterra deals in the system, so this $1,295 represents their entire relationship value so far."
-          `.trim(),
+            - Lead with the key answer to their question
+            - Include specific numbers and percentages
+            - Highlight patterns or notable findings
+            - Use business language, not technical terms
+            - Be concise but comprehensive
+            - If error occurred, explain it simply
+          `.trim()
         },
+        //   content: `
+        //     You are a business data analyst. Create clear, scannable insights from SQL results.
+            
+        //     Context:
+        //     - Table: ${selectedTable} (${tablePurpose})
+        //     - Question: "${input}"
+        //     - Records found: ${analysis.recordCount || 0}
+        //     - Has numeric data: ${analysis.hasNumericData}
+            
+        //     RESPONSE STYLE:
+        //     Write like you're having a conversation with a business colleague. Use natural language, not markdown formatting.
+            
+        //     STRUCTURE FOR READABILITY:
+            
+        //     1. **Lead with Direct Answer**: 
+        //       Start with a clear, conversational answer to their question.
+        //       Example: "Venterra generated $1,295 in total revenue from one deal."
+            
+        //     2. **Keep It Conversational**:
+        //       - Write in complete sentences, not bullet points or headers
+        //       - Use natural transitions like "Additionally," "What's interesting is," "Here's what stands out"
+        //       - Avoid technical markdown symbols (##, **, --)
+            
+        //     3. **Make Numbers Clear**:
+        //       - Embed numbers naturally: "The total came to $1,295"
+        //       - Round appropriately: "$1.2 million" not "$1,234,567"
+        //       - Add context: "$50K, which is 25% above average"
+            
+        //     4. **Organize Long Responses Naturally**:
+        //       Instead of headers, use transitional phrases:
+        //       - "Here's what I found..."
+        //       - "Looking at the details..."
+        //       - "What stands out is..."
+        //       - "The key takeaway is..."
+            
+        //     5. **Business Language**:
+        //       - Say "customers" not "records"
+        //       - Say "deals" not "rows"  
+        //       - Say "revenue totaled" not "sum of amount column equals"
+        //       - Use active voice: "John closed 5 deals" not "5 deals were closed by John"
+            
+        //     6. **Keep Paragraphs Short**:
+        //       - 2-3 sentences maximum per paragraph
+        //       - Add line breaks between different topics
+        //       - Use white space to make it scannable
+            
+        //     7. **Error Handling**:
+        //       If there's an error, explain it conversationally:
+        //       "I couldn't find any deals matching that name. You might want to try searching for a partial match instead."
+            
+        //     EXAMPLE OUTPUT STYLE:
+        //     "Venterra generated $1,295 in total revenue from one deal.
+            
+        //     Looking at the details, this appears to be the only deal recorded under that exact name. The amount represents the complete revenue from this single transaction.
+            
+        //     What's worth noting is that there aren't any other Venterra deals in the system, so this $1,295 represents their entire relationship value so far."
+        //   `.trim(),
+        // },
         { role: "user", content: input },
         {
           role: "assistant",
@@ -607,31 +622,6 @@ async function loadChain(session_id) {
               })}`,
         },
       ];
-
-      // const summaryPrompt = [
-      //   {
-      //     role: 'system',
-      //     content: `
-      //       You are a business data analyst. Create clear, actionable insights from SQL results.
-
-      //       Rules:
-      //       - Start with the direct answer to their question
-      //       - Keep it short - 2-3 sentences max
-      //       - Use simple business language
-      //       - Include key numbers when relevant
-      //       - No technical jargon or database terms
-      //       - If no data found, just say "No results found"
-      //       - If error, say "Unable to retrieve data"
-      //     `.trim()
-      //   },
-      //   { role: 'user', content: input },
-      //   {
-      //     role: 'assistant',
-      //     content: sqlError
-      //       ? `Error retrieving data`
-      //       : `Results: ${JSON.stringify(result)}`
-      //   }
-      // ];
 
       const summaryResponse = await openai.invoke(summaryPrompt);
       const finalAnswer = summaryResponse.content.trim();
@@ -647,6 +637,9 @@ async function loadChain(session_id) {
         query_success: !sqlError,
         last_updated: new Date().toISOString(),
       });
+
+      const executionTime = Date.now() - startTime;
+      writeToLogFile(`\nresult: ${JSON.stringify(finalAnswer)}, \nexecutionTime: ${executionTime}ms, \nsql: ${sql}, \nsqlResponse: ${JSON.stringify(result)}`);
 
       return finalAnswer;
     } catch (error) {
@@ -667,7 +660,7 @@ async function loadChain(session_id) {
   };
 }
 
-// NEW: Batch query support
+//Batch query support
 async function batchQuery(session_id, questions) {
   const chain = await loadChain(session_id);
   const results = [];
@@ -685,7 +678,7 @@ async function batchQuery(session_id, questions) {
   return results;
 }
 
-// NEW: Query performance analytics
+//Query performance analytics
 async function getQueryAnalytics(session_id) {
   const metadata = await getSessionMetadata(session_id);
   return {
@@ -701,5 +694,5 @@ module.exports = {
   loadChain,
   batchQuery,
   getQueryAnalytics,
-  selectBestTable, // Export for testing
+  selectBestTable, 
 };
