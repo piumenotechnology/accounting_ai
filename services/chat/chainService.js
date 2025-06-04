@@ -589,6 +589,8 @@ async function loadChain(session_id) {
       const executionTime = Date.now() - startTime;
       writeToLogFile(`\nresult: ${JSON.stringify(finalAnswer)}, \nexecutionTime: ${executionTime}ms, \nsql: ${sql}, \nsqlResponse: ${JSON.stringify(result)}`);
 
+      console.log("result: ", finalAnswer);
+      
       return finalAnswer;
     } catch (error) {
       console.error("❌ Chain execution error:", error);
