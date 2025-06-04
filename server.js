@@ -31,7 +31,7 @@ app.get('/checkSheet', async(req, res)=> {
   }
 })
 
-app.get('/check_input', async(req, res) => {
+app.post('/check_input', async(req, res) => {
   try {
     const { session_id, message, table } = req.query;
 
