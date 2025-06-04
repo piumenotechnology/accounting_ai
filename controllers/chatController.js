@@ -2,7 +2,8 @@ const { loadChain } = require('../services/chat/chainService');
 
 async function handleChat(req, res) {
   try {
-    const { session_id, message, table } = req.body;
+    // const { session_id, message, table } = req.body;
+    const { session_id, message, table } =  req.query;
 
     if (!session_id || !message) {
       return res.status(400).json({
@@ -13,8 +14,6 @@ async function handleChat(req, res) {
     const chain = await loadChain(session_id); // Load the chain for the session
     
     const response = await chain({ input: message.toLowerCase(), table: table.toLowerCase() }); // Pass the table name to the chain
-    
-    // console.log(`💬 [${session_id}] ${message}`);
 
     res.json({ response });
   } catch (error) {
