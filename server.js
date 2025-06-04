@@ -35,6 +35,8 @@ app.post('/check_input', async(req, res) => {
   try {
     const { session_id, message, table } = req.query;
 
+    console.log('🔍 Checking input parameters:', { session_id, message, table });
+
     if (!session_id, !message || !table) {
       console.log('❌ Missing session_id, message, or table parameter');
       return res.status(400).json({ error: 'Missing input parameter' });
