@@ -2,5 +2,6 @@
 .env
 node_modules
 credentials.json
-temp.js
+temp
 app.log
+

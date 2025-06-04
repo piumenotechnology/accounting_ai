@@ -7,7 +7,6 @@ const {
   setSessionMetadata,
 } = require("./memoryService");
 
-
 function writeToLogFile(logMessage) {
   const timestamp = new Date().toISOString();
   const logEntry = `${timestamp} - ${logMessage}\n`;
@@ -49,15 +48,7 @@ const QUESTION_INTENTS = {
 //Common business patterns
 const BUSINESS_PATTERNS = {
   revenue: ["sales", "revenue", "income", "earnings", "closed deals"],
-  pipeline: [
-    "leads",
-    "opportunities",
-    "pipeline",
-    "prospects",
-    "potential",
-    "funnel",
-    "stages",
-  ],
+  pipeline: ["leads", "opportunities", "pipeline", "prospects", "potential", "funnel", "stages",],
   conversion: ["conversion", "close rate", "win rate", "success rate"],
   sources: ["source", "channel", "marketing", "campaign", "referral"],
   activities: ["notes", "emails", "contacts", "touched", "activity"],
@@ -411,6 +402,10 @@ async function loadChain(session_id) {
         console.warn("⚠️ SQL validation issues:", validation.issues);
         // Could retry with corrections, but skip for now
       }
+
+      console.log("🔍 sesion_id : ", session_id);
+      console.log("🔍 Selected table:", selectedTable);
+      console.log("🔍 Input question:", input);
 
       console.log("⚡ Generated SQL:", sql);
 
