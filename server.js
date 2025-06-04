@@ -35,16 +35,17 @@ app.get('/check_input', async(req, res) => {
   try {
     const { session_id, message, table } = req.query;
 
-    if (!session_id || ! message || !table) {
+    if (!session_id, !message || !table) {
+      console.log('❌ Missing session_id, message, or table parameter');
       return res.status(400).json({ error: 'Missing input parameter' });
     }
 
-    console.log(`🔍 Checking input: session_id=${session_id}, message=${message}, table=${table}`);
+    console.log(`🔍 Checking input for session_id: ${session_id}, message: ${message}, table: ${table}`);
 
     return res.json({
       session_id,
-      message,  
-      table
+      message,
+      table,
     });
 
   } catch (error) {
