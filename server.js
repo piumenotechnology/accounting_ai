@@ -33,8 +33,8 @@ app.get('/checkSheet', async(req, res)=> {
 
 app.get('/check_input', async(req, res) => {
   try {
-    // const { session_id, message, table } = req.query;
-    const { session_id, message, table } = req.body;
+    const { session_id, message, table } = req.query;
+    // const { session_id, message, table } = req.body;
 
     console.log('🔍 Checking input parameters:', { session_id, message, table });
 
