@@ -31,6 +31,29 @@ app.get('/checkSheet', async(req, res)=> {
   }
 })
 
+app.get('/check_input', async(req, res) => {
+  try {
+    const { session_id, message, table } = req.query;
+
+    if (!session_id || ! message || !table) {
+      return res.status(400).json({ error: 'Missing input parameter' });
+    }
+
+    console.log(`🔍 Checking input: session_id=${session_id}, message=${message}, table=${table}`);
+
+    return res.json({
+      session_id,
+      message,  
+      table
+    });
+
+  } catch (error) {
+    console.error('❌ Error checking input:', error.message);
+    res.status(500).json({ error: 'Failed to check input' });
+  }
+})
+
+
 app.get('/cekDB', async (req, res) => {
   try {
 
