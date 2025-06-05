@@ -248,7 +248,7 @@ function analyzeResults(results, question, tableName) {
   };
 }
 
-//Main chain with error recovery
+// //Main chain with error recovery
 async function loadChain(session_id) {
   const chatHistory = getChatHistory(session_id);
 
@@ -590,7 +590,7 @@ async function loadChain(session_id) {
       writeToLogFile(`\nresult: ${JSON.stringify(finalAnswer)}, \nexecutionTime: ${executionTime}ms, \nsql: ${sql}, \nsqlResponse: ${JSON.stringify(result)}`);
 
       console.log("result: ", finalAnswer);
-      
+
       return finalAnswer;
     } catch (error) {
       console.error("❌ Chain execution error:", error);
