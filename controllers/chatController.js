@@ -2,8 +2,8 @@ const { loadChain } = require('../services/chat/chainService');
 
 async function handleChat(req, res) {
   try {
-    // const { session_id, message, table } = req.body;
-    const { session_id, message, table } =  req.query;
+    const { session_id, message, table } = req.body;
+    // const { session_id, message, table } =  req.query;
 
     if (!session_id || !message) {
       return res.status(400).json({

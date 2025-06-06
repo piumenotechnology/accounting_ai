@@ -591,7 +591,38 @@ async function loadChain(session_id) {
 
       console.log("result: ", finalAnswer);
       
-      return finalAnswer;
+      // return finalAnswer;
+
+      if (sqlError) {
+        return {
+          type: "text",
+          content: `Query error: ${sqlError}`,
+        };
+      }
+
+      if (analysis.hasNumericData && analysis.hasDateData && analysis.bestDateColumn && analysis.bestNumericColumn) {
+        return {
+          type: "chart",
+          chartType: "bar", // You can improve this to auto-select later
+          labels: result.map(row => row[analysis.bestDateColumn]),
+          data: result.map(row => row[analysis.bestNumericColumn]),
+          summary: finalAnswer,
+        };
+      } else if (result.length > 0) {
+        return {
+          type: "table",
+          columns: Object.keys(result[0]),
+          rows: result.map(row => Object.values(row)),
+          summary: finalAnswer,
+        };
+      } else {
+        return {
+          type: "text",
+          content: finalAnswer,
+        };
+      }
+
+
     } catch (error) {
       console.error("❌ Chain execution error:", error);
 
