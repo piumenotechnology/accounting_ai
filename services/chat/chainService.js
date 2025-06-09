@@ -25,7 +25,8 @@ const tableSchemas = {
   payment:"payment(supplier_invoices, payment_date, currency, detail, amount_cad, vendor_name, amount,expenses_type,expenses_code,account_type,expenses_detail)",
   ap: "ap(date, transaction_type, invoice_number, supplier, due_date, amount, open_balance, foreign_amount, foreign_open_balance, currency, exchange_rate)",
   ar: "ar(date, transaction_type, invoice_number, customer, due_date, amount, open_balance, foreign_amount, foreign_open_balance, curency, exchange_rate)",
-};
+  pl: "pl(date, name, amount)",
+}
 
 const tableDescriptions = {
   closed_deal:"Tracks closed sales deals such as sponsorships and delegate registrations.",
@@ -34,6 +35,7 @@ const tableDescriptions = {
   payment:"Captures outgoing payments to vendors, including invoice references, vendor names, payment details, and dates.",
   ap: "Tracks accounts payable — amounts we owe suppliers — including due dates and foreign balances.",
   ar: "Tracks accounts receivable — amounts customers owe — including due dates, currencies, and outstanding balances.",
+  pl: "Tracks profit and loss data, including dates, names, and amounts for financial analysis.",
 };
 
 //Question intent classification
@@ -55,7 +57,7 @@ const BUSINESS_PATTERNS = {
   expenses: ["payments", "costs", "expenses", "spent", "paid out"],
   customers: ["clients", "customers", "buyers", "accounts"],
   suppliers: ["vendors", "suppliers", "providers"],
-  outstanding: ["due", "overdue", "outstanding", "unpaid", "pending"],
+  outstanding: ["due", "overdue", "outstanding", "unpaid", "pending"]
 };
 
 function cleanSQL(text) {
@@ -352,10 +354,14 @@ async function loadChain(session_id) {
               - expenses_type, expenses_code, account_type, expenses_detail can also be used for specific searches dont change string Salaries 
               - when seaching expenses_type include expenses_detail like expenses_type ilike '%Salaries%' OR expenses_detail ILIKE '%Salaries%'
                 
-              
               Examples:
               - "Vendor Corp" → WHERE vendor_name ILIKE '%corp%'
               - "Reference PAY-123" → WHERE supplier_invoices ILIKE '%pay-123%'
+
+            6. **pl** (Profit and Loss) table:
+              - String input → Match against: name
+              - Code input → Match against: date (if applicable)
+              - date can be used for specific searches like date >= '2024-01-01'::date
 
             QUERY CONSTRUCTION LOGIC:
             - For "what is [item] for [person]" → SELECT * to show all deal details
@@ -603,7 +609,7 @@ async function loadChain(session_id) {
     if (analysis.hasNumericData && analysis.hasDateData && analysis.bestDateColumn && analysis.bestNumericColumn) {
       return {
         type: "chart",
-        chartType: "bar", // You can improve this to auto-select later
+        chartType: "bar", 
         labels: result.map(row => row[analysis.bestDateColumn]),
         data: result.map(row => row[analysis.bestNumericColumn]),
         summary: finalAnswer,

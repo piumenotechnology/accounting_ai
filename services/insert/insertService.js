@@ -19,7 +19,6 @@ async function insertMappedData(mappedData) {
 
         const placeholders = columns.map((_, idx) => `$${idx + 1}`).join(', ');
         
-
         const insertQuery = `
           INSERT INTO ${tableName} (${columns.join(', ')})
           VALUES (${placeholders})
@@ -36,5 +35,7 @@ async function insertMappedData(mappedData) {
     }
   }
 }
+
+
 
 module.exports = { insertMappedData };

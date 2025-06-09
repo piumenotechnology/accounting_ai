@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { handleImport } = require('../controllers/importController');
+const { handleImport, handleInsertBS, handleInsertPL, handleInsertCashFlow } = require('../controllers/importController');
 
 router.post('/', handleImport);
+router.post('/pl', handleInsertPL);
+router.post('/bs', handleInsertBS);
+router.post('/cash-flow', handleInsertCashFlow);
 
 module.exports = router;

@@ -12,7 +12,8 @@ connectRedis(); // 🔌 Connect to Redis
 // Import Routes
 const chatRoutes = require('./routes/chatRoutes');
 const importRoutes = require('./routes/importRoutes');
-const {fetchAllSheetsData} = require('./services/insert/googleSheetsService')
+const authRoutes = require('./routes/authRoutes');
+const {fetchAllSheetsData, insert_bs, insert_pl, insert_cash_flow} = require('./services/insert/googleSheetsService')
 
 // Middleware
 app.use(express.json());
@@ -20,16 +21,7 @@ app.use(express.json());
 // API Routes
 app.use('/chat', chatRoutes);
 app.use('/import', importRoutes);
-
-app.get('/checkSheet', async(req, res)=> {
-  try {
-    const data = await fetchAllSheetsData();
-    res.json(data);
-  } catch (error) {
-    console.error('❌ Error fetching sheet data:', error.message);
-    res.status(500).json({ error: 'Failed to fetch sheet data' });
-  }
-})
+app.use('/auth', authRoutes);
 
 app.get('/check_input', async(req, res) => {
   try {
@@ -71,6 +63,8 @@ app.get('/cekDB', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch sheet data' });
   }
 })
+
+
 
 // Health Check
 app.get('/', (req, res) => {

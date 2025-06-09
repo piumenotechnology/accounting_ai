@@ -12,6 +12,7 @@ function normalizeKey(key) {
   return key.toLowerCase().replace(/\s+/g, '_');
 }
 
+// data structue in payment sheet
 function parsePaymentExpenseType(value) {
   try {
     if (!value || typeof value !== 'string') return null;
@@ -23,12 +24,9 @@ function parsePaymentExpenseType(value) {
     const accountRefName = firstObj?.AccountRef?.name || null;
     
     if (!accountRefName) return { expenses_type: null };
-    
-    // Parse the format: "5430 direct costs:commission expense:sponsorship commissions"
     const parts = accountRefName.split(':');
     
     if (parts.length >= 3) {
-      // Extract code and account type from first part (e.g., "5430 direct costs")
       const firstPart = parts[0].trim();
       const spaceIndex = firstPart.indexOf(' ');
       
@@ -56,7 +54,6 @@ function parsePaymentExpenseType(value) {
         expenses_detail: null
       };
     } else {
-      // Single part - treat as expenses_type
       return { expenses_type: accountRefName };
     }
     
@@ -113,7 +110,7 @@ function processRow(sheetName, row, index) {
         normalizedKey === 'date' && 
         typeof value === 'string' &&
         !isValidDate(value)) {
-      return null; // This will filter out the entire row
+      return null;
     }
     
     const processedValue = processValue(sheetName, normalizedKey, value);
@@ -153,7 +150,10 @@ function mapSheetsData(allSheetsData) {
     // 'payment',
     // 'invoice',
     // 'ap',
-    // 'closed_deal' 
+    // 'closed_deal',
+    'pl',
+    'bs',
+    'cash_flow',
   ];
 
   for (const [sheetName, rows] of Object.entries(allSheetsData)) {
