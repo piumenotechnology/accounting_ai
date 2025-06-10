@@ -289,31 +289,6 @@ async function loadChain(session_id) {
             Purpose: ${tablePurpose}
             Schema: ${tableSchema}
 
-            CRITICAL - QUESTION UNDERSTANDING & COLUMN MATCHING:
-            
-            STEP 1 - UNDERSTAND THE QUESTION TYPE:
-            - "what is/are [item] for [person]?" → Get records owned/associated with person
-            - "show me [company] deals" → Get records for specific company  
-            - "find [code]" → Get specific record by code/ID
-            - "total/sum/revenue" → Aggregate query
-            - "recent/latest" → Date-filtered query
-
-            STEP 2 - IDENTIFY SEARCH ENTITIES:
-            - Person names (John, Mitch, Sarah) → Use owner/sales rep columns
-            - Company names (Acme, Microsoft) → Use deal/customer/client name columns  
-            - Codes (ABC123, INV-001) → Use ID/code columns
-            - Amounts/dates → Use numeric/date columns
-            - how much we pay for Sponsorship Commissions in 2025 ? -> string search "%Sponsorship Commissions%"
-
-            STEP 3 - TABLE-SPECIFIC COLUMN MATCHING:
-            When user mentions search terms, choose the RIGHT columns based on table type and input pattern:
-
-            INPUT PATTERN DETECTION:
-            - Code Pattern: Letters+numbers (e.g., "ABC123", "INV-2024-001") 
-            - String Pattern: Company names, person names, descriptive text
-
-            TABLE-SPECIFIC MATCHING:
-
             1. **closed_deal** or **lead** tables:
               - String input (companies/people) → Match against: company_name, dealname, hubspot_owner_name
               - Code input (conference codes) → Match against: conference_internal_name
@@ -351,11 +326,11 @@ async function loadChain(session_id) {
             5. **payment** table:
               - String input → Match against: vendor_name
               - Code input → Match against: supplier_invoices
-              - expenses_type, expenses_code, account_type, expenses_detail can also be used for specific searches dont change string Salaries 
               - when seaching expenses_type include expenses_detail example expenses_type ilike '%Salaries%' OR expenses_detail ILIKE '%Salaries%'
               Examples:
               - "Vendor Corp" → WHERE vendor_name ILIKE '%corp%'
               - "Reference PAY-123" → WHERE supplier_invoices ILIKE '%pay-123%'
+              - "how much we pay for Photographer in 2025 ?" → WHERE expenses_type ILIKE '%photographer%' OR expenses_detail ILIKE '%photographer%'
 
             6. **pl** (Profit and Loss) table:
               - String input → Match against: name
@@ -366,10 +341,6 @@ async function loadChain(session_id) {
               - String input → Match against: name
               - Code input → Match against: date (if applicable)
               - date can be used for specific searches like date >= '2024-01-01'
-
-
-
-            
 
             QUERY CONSTRUCTION LOGIC:
             - For "what is [item] for [person]" → SELECT * to show all deal details
@@ -401,6 +372,33 @@ async function loadChain(session_id) {
             Return ONLY the SQL query - no explanations or formatting.
           `.trim(),
         },
+
+        /*
+         CRITICAL - QUESTION UNDERSTANDING & COLUMN MATCHING:
+            
+            STEP 1 - UNDERSTAND THE QUESTION TYPE:
+            - "what is/are [item] for [person]?" → Get records owned/associated with person
+            - "show me [company] deals" → Get records for specific company  
+            - "find [code]" → Get specific record by code/ID
+            - "total/sum/revenue" → Aggregate query
+            - "recent/latest" → Date-filtered query
+
+            STEP 2 - IDENTIFY SEARCH ENTITIES:
+            - Person names (John, Mitch, Sarah) → Use owner/sales rep columns
+            - Company names (Acme, Microsoft) → Use deal/customer/client name columns  
+            - Codes (ABC123, INV-001) → Use ID/code columns
+            - Amounts/dates → Use numeric/date columns
+            - how much we pay for Sponsorship Commissions in 2025 ? -> string search "%Sponsorship Commissions%"
+
+            STEP 3 - TABLE-SPECIFIC COLUMN MATCHING:
+            When user mentions search terms, choose the RIGHT columns based on table type and input pattern:
+
+            INPUT PATTERN DETECTION:
+            - Code Pattern: Letters+numbers (e.g., "ABC123", "INV-2024-001") 
+            - String Pattern: Company names, person names, descriptive text
+
+            TABLE-SPECIFIC MATCHING:
+        */
         ...recentContext.map((m) => ({
           role: m._getType?.() || m.role,
           content: m.content,
