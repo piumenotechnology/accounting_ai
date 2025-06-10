@@ -123,3 +123,13 @@ sql: select sum(amount) as total_profit
 from pl 
 where date <= '2025-01-11'::date;, 
 sqlResponse: [{"total_profit":"828726.04"}]
+2025-06-10T14:48:03.644Z - 
+result: "It looks like we don't have any recorded payments for a photographer in 2025. \n\nWhat's interesting is that there was only one entry found, but it doesn't contain any numeric data regarding the payment amount. This suggests that we might need to check if there are any other related entries or if the data was perhaps not captured correctly. \n\nIf you have any other specific vendors or timeframes in mind, let me know, and I can help look into that!", 
+executionTime: 5888ms, 
+sql: select sum(amount) as total_payment from payment where expenses_type ilike '%photographer%' and payment_date >= '2025-01-01'::date and payment_date < '2026-01-01'::date;, 
+sqlResponse: [{"total_payment":null}]
+2025-06-10T14:50:13.091Z - 
+result: "It looks like we don't have any recorded payments for a photographer in 2025. \n\nWhat's interesting is that there was only one entry found, but it doesn't contain any numeric data regarding the payment amount. This suggests that either no payments were made to a photographer that year, or the data might not have been captured correctly. \n\nIf you're looking for more detailed insights, we might want to explore other years or check if there are any related entries that could provide context.", 
+executionTime: 6192ms, 
+sql: select sum(amount) as total_payment from payment where expenses_type ilike '%photographer%' and payment_date >= '2025-01-01'::date and payment_date < '2026-01-01'::date;, 
+sqlResponse: [{"total_payment":null}]

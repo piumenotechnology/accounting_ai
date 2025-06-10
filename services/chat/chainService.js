@@ -352,7 +352,7 @@ async function loadChain(session_id) {
               - String input → Match against: vendor_name
               - Code input → Match against: supplier_invoices
               - expenses_type, expenses_code, account_type, expenses_detail can also be used for specific searches dont change string Salaries 
-              - when seaching expenses_type include expenses_detail like expenses_type ilike '%Salaries%' OR expenses_detail ILIKE '%Salaries%'
+              - when seaching expenses_type include expenses_detail example expenses_type ilike '%Salaries%' OR expenses_detail ILIKE '%Salaries%'
               Examples:
               - "Vendor Corp" → WHERE vendor_name ILIKE '%corp%'
               - "Reference PAY-123" → WHERE supplier_invoices ILIKE '%pay-123%'
