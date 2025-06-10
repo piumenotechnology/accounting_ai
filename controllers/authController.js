@@ -15,7 +15,7 @@ const auth = {
             const hashedPassword = await hashPassword(password);
             const newUser = await authModels.createUser({ name, email, password: hashedPassword });
             const token = generateToken(newUser);
-            res.status(201).json({ user: { id: newUser.id, name: newUser.name, email: newUser.email }, token });
+            res.status(201).json({ user: {name: newUser.name, email: newUser.email }, token });
         } catch (error) {
             console.error('❌ Error during registration:', error.message);
             res.status(500).json({ error: 'Registration failed' });
@@ -36,7 +36,7 @@ const auth = {
                 return res.status(401).json({ error: 'Invalid email or password' });
             }
             const token = generateToken(user);
-            res.json({ user: { id: user.id, name: user.name, email: user.email }, token });
+            res.json({ user: { name: user.name, email: user.email }, token });
         } catch (error) {
             console.error('❌ Error during login:', error.message);
             res.status(500).json({ error: 'Login failed' });
@@ -57,7 +57,7 @@ const auth = {
     },
     updatePassword: async (req, res) => {
         try {
-            const userId = req.user.id; // Assuming user ID is stored in req.user
+            const userId = req.user.id; 
             const { currentPassword, newPassword } = req.body;
             if (!currentPassword || !newPassword) {
                 return res.status(400).json({ error: 'Current and new passwords are required' });
@@ -80,7 +80,7 @@ const auth = {
     },
     deleteUser: async (req, res) => {
         try {
-            const userId = req.user.id; // Assuming user ID is stored in req.user
+            const userId = req.user.id; 
             const deletedUser = await authModels.deleteUser(userId);
             if (!deletedUser) {
                 return res.status(404).json({ error: 'User not found' });

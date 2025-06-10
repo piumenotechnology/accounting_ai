@@ -26,6 +26,8 @@ const tableSchemas = {
   ap: "ap(date, transaction_type, invoice_number, supplier, due_date, amount, open_balance, foreign_amount, foreign_open_balance, currency, exchange_rate)",
   ar: "ar(date, transaction_type, invoice_number, customer, due_date, amount, open_balance, foreign_amount, foreign_open_balance, curency, exchange_rate)",
   pl: "pl(date, name, amount)",
+  bs: "bs(date, month, week, name, amount)",
+  cash_flow: "cash_flow(date, month, week, name, amount)",
 }
 
 const tableDescriptions = {
@@ -36,6 +38,8 @@ const tableDescriptions = {
   ap: "Tracks accounts payable — amounts we owe suppliers — including due dates and foreign balances.",
   ar: "Tracks accounts receivable — amounts customers owe — including due dates, currencies, and outstanding balances.",
   pl: "Tracks profit and loss data, including dates, names, and amounts for financial analysis.",
+  bs: "Tracks balance sheet data, including dates, names, and amounts for financial position analysis.",
+  cash_flow: "Tracks cash flow data, including dates, names, and amounts for liquidity analysis.",
 };
 
 //Question intent classification
@@ -315,7 +319,6 @@ async function loadChain(session_id) {
               - Code input (conference codes) → Match against: conference_internal_name
 
               for lead table, also consider dealstage_name 
-              
               Examples:
               - "Acme Corp deals" → WHERE company_name ILIKE '%acme%'
               - "what is deal for mitch?" → SELECT * FROM table WHERE hubspot_owner_name ILIKE '%mitch%'
@@ -327,7 +330,6 @@ async function loadChain(session_id) {
             2. **ap** (Accounts Payable) table:
               - String input → Match against: supplier
               - Code input → Match against: invoice_number
-              
               Examples:
               - "Vendor ABC" → WHERE supplier ILIKE '%abc%'
               - "Invoice INV-123" → WHERE invoice_number ILIKE '%inv-123%'
@@ -335,7 +337,6 @@ async function loadChain(session_id) {
             3. **ar** (Accounts Receivable) table:
               - String input → Match against: customer
               - Code input → Match against: invoice_number
-              
               Examples:
               - "Customer XYZ" → WHERE customer ILIKE '%xyz%'
               - "Invoice AR-456" → WHERE invoice_number ILIKE '%ar-456%'
@@ -343,7 +344,6 @@ async function loadChain(session_id) {
             4. **invoice** table:
               - String input → Match against: customer_name
               - Code input → Match against: invoice_number
-              
               Examples:
               - "Client ABC" → WHERE customer_name ILIKE '%abc%'
               - "Invoice 789" → WHERE invoice_number ILIKE '%789%'
@@ -353,7 +353,6 @@ async function loadChain(session_id) {
               - Code input → Match against: supplier_invoices
               - expenses_type, expenses_code, account_type, expenses_detail can also be used for specific searches dont change string Salaries 
               - when seaching expenses_type include expenses_detail like expenses_type ilike '%Salaries%' OR expenses_detail ILIKE '%Salaries%'
-                
               Examples:
               - "Vendor Corp" → WHERE vendor_name ILIKE '%corp%'
               - "Reference PAY-123" → WHERE supplier_invoices ILIKE '%pay-123%'
@@ -362,6 +361,15 @@ async function loadChain(session_id) {
               - String input → Match against: name
               - Code input → Match against: date (if applicable)
               - date can be used for specific searches like date >= '2024-01-01'::date
+
+            7. **bs** (Balance Sheet) table:
+              - String input → Match against: name
+              - Code input → Match against: date (if applicable)
+              - date can be used for specific searches like date >= '2024-01-01'
+
+
+
+            
 
             QUERY CONSTRUCTION LOGIC:
             - For "what is [item] for [person]" → SELECT * to show all deal details

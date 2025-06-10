@@ -61,6 +61,15 @@ async function fetchAllSheetsData() {
   return allData;
 }
 
+function getWeekOfMonth(date) {
+  const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+  const dayOfMonth = date.getDate();
+  const dayOfWeekOfFirst = startOfMonth.getDay(); // 0 = Sunday, 6 = Saturday
+  const week = Math.floor((dayOfMonth + dayOfWeekOfFirst - 1) / 7) + 1;
+  return `Week ${week}`;
+}
+
+
 async function insert_pl() {
   const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
@@ -91,6 +100,7 @@ async function insert_pl() {
   }
 
   try {
+    await pgClient.query(`DELETE FROM pl`);
     await pgClient.query('BEGIN');
 
     const insertSQL = 'INSERT INTO pl (date, name, amount) VALUES ($1, $2, $3)';
@@ -146,7 +156,8 @@ async function insert_bs() {
 
       // Format as "Jan 2025"
       const month = `${parsedDate.toLocaleString('en-US', { month: 'short' })} ${parsedDate.getFullYear()}`;
-      const week = `Week ${j}`; // based on column position
+      const week = getWeekOfMonth(parsedDate);
+
 
       longFormat.push({
         date: parsedDate,
@@ -159,6 +170,7 @@ async function insert_bs() {
   }
 
   try {
+    await pgClient.query(`DELETE FROM bs`);
     await pgClient.query('BEGIN');
     const insertSQL = 'INSERT INTO bs (date, month, week, name, amount) VALUES ($1, $2, $3, $4, $5)';
 
@@ -213,7 +225,8 @@ async function insert_cash_flow() {
 
       // Format as "Jan 2025"
       const month = `${parsedDate.toLocaleString('en-US', { month: 'short' })} ${parsedDate.getFullYear()}`;
-      const week = `Week ${j}`; // based on column position
+      const week = getWeekOfMonth(parsedDate);
+
 
       longFormat.push({
         date: parsedDate,
@@ -226,6 +239,7 @@ async function insert_cash_flow() {
   }
 
   try {
+    await pgClient.query(`DELETE FROM cash_flow`);
     await pgClient.query('BEGIN');
     const insertSQL = 'INSERT INTO cash_flow (date, month, week, name, amount) VALUES ($1, $2, $3, $4, $5)';
 
