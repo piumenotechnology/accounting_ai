@@ -359,9 +359,8 @@ async function loadChain(session_id) {
               - Use ILIKE for case-insensitive matching
               - Use % wildcards for partial matches
               Examples:
-              - "Balance for January 2025" → from bs WHERE month = 'jan 2025' 
-              - "Balance week 4" → WHERE week = 'week 4'
               - "Balance for January 25 2025" → WHERE month = 'jan 2025' and week = 'week 4'
+              - "Balance for January 2025" → from bs WHERE month = 'jan 2025' 
               - "Balance for 2860 rbc line credit" → WHERE name ILIKE '%2860 rbc line credit%'
 
             7. **pl** (Profit and Loss) table:
