@@ -16,31 +16,32 @@ function writeToLogFile(logMessage) {
       console.error('Error writing to log file:', err);
     }
   });
-}
+};
 
 const tableSchemas = {
   closed_deal:"closed_deal(amount, amount_in_home_currency, closedate, hs_closed_amount, dealname, dealtype, initial_traffic_source,	traffic_source_detail_or_entry_point, company_name, conference_internal_name, hs_is_closed_won, hubspot_owner_name)", //conference_code,
   lead: "lead(amount, amount_in_home_currency, hs_closed_amount, hs_closed_amount_in_home_currency, createdate, days_to_close, conference_internal_name,  dealname, dealtype, notes_last_updated, notes_last_contacted, num_notes, initial_traffic_source, traffic_source_detail_or_entry_point, hs_sales_email_last_replied, company_name, conference_group, hs_is_closed_won, hubspot_owner_name, dealstage_name)", //closedate, conference_code
   invoice:"invoice(invoice_number, invoice_date, currency, customer_name, amount_cad)",
-  payment:"payment(supplier_invoices, payment_date, currency, detail, amount_cad, vendor_name, amount,expenses_type,expenses_code,account_type,expenses_detail)",
+  payment:"payment(supplier_invoices, payment_date, currency, detail, vendor_name, amount,expenses_type,expenses_code,account_type,expenses_detail)",
   ap: "ap(date, transaction_type, invoice_number, supplier, due_date, amount, open_balance, foreign_amount, foreign_open_balance, currency, exchange_rate)",
   ar: "ar(date, transaction_type, invoice_number, customer, due_date, amount, open_balance, foreign_amount, foreign_open_balance, curency, exchange_rate)",
   pl: "pl(date, name, amount)",
   bs: "bs(date, month, week, name, amount)",
   cash_flow: "cash_flow(date, month, week, name, amount)",
-}
+};
 
 const tableDescriptions = {
-  closed_deal:"Tracks closed sales deals such as sponsorships and delegate registrations.",
+  closed_deal: "Tracks closed sales deals such as sponsorships and delegate registrations.",
   lead: "Tracks active sales opportunities and pipeline deals that are not yet closed, including deal stages, sources, and sales activities.",
-  invoice:"Contains invoices issued to customers, with details like invoice number, date, customer name, and billed amount.",
-  payment:"Captures outgoing payments to vendors, including invoice references, vendor names, payment details, and dates.",
-  ap: "Tracks accounts payable — amounts we owe suppliers — including due dates and foreign balances.",
-  ar: "Tracks accounts receivable — amounts customers owe — including due dates, currencies, and outstanding balances.",
-  pl: "Tracks profit and loss data, including dates, names, and amounts for financial analysis.",
-  bs: "Tracks balance sheet data, including dates, names, and amounts for financial position analysis.",
-  cash_flow: "Tracks cash flow data, including dates, names, and amounts for liquidity analysis.",
+  invoice: "Contains invoices issued to customers, with details like invoice number, date, customer name, and billed amount.",
+  payment: "Captures outgoing payments to vendors, including invoice references, vendor names, payment details, and dates.",
+  ap: "Tracks accounts payable, including amounts owed to suppliers, due dates, and foreign balances.",
+  ar: "Tracks accounts receivable, including outstanding customer balances, due dates, and currencies.",
+  pl: "Contains profit and loss data for financial analysis, including income, expenses, and net profit by date.",
+  bs: "Contains balance sheet data, including assets, liabilities, and equity positions by reporting period.",
+  cash_flow: "Tracks cash inflows and outflows by category and date, used for liquidity and cash management analysis.",
 };
+
 
 //Question intent classification
 const QUESTION_INTENTS = {
@@ -54,15 +55,19 @@ const QUESTION_INTENTS = {
 //Common business patterns
 const BUSINESS_PATTERNS = {
   revenue: ["sales", "revenue", "income", "earnings", "closed deals"],
-  pipeline: ["leads", "opportunities", "pipeline", "prospects", "potential", "funnel", "stages",],
+  pipeline: ["leads", "opportunities", "pipeline", "prospects", "potential", "funnel", "stages"],
   conversion: ["conversion", "close rate", "win rate", "success rate"],
   sources: ["source", "channel", "marketing", "campaign", "referral"],
   activities: ["notes", "emails", "contacts", "touched", "activity"],
   expenses: ["payments", "costs", "expenses", "spent", "paid out"],
   customers: ["clients", "customers", "buyers", "accounts"],
   suppliers: ["vendors", "suppliers", "providers"],
-  outstanding: ["due", "overdue", "outstanding", "unpaid", "pending"]
+  outstanding: ["due", "overdue", "outstanding", "unpaid", "pending"],
+  cash_flow: ["cash flow", "inflows", "outflows", "liquidity", "cash movement", "net cash"],
+  pl: ["profit", "loss", "income statement", "net income", "revenue", "expenses", "p&l"],
+  bs: ["balance sheet", "assets", "liabilities", "equity", "financial position", "capital"]
 };
+
 
 function cleanSQL(text) {
   return text
@@ -125,6 +130,15 @@ async function selectBestTable(
         case "outstanding":
           patternMatches.push("ar", "ap");
           break;
+        case "cash_flow":
+          patternMatches.push("cash_flow");
+          break;
+        case "pl":
+          patternMatches.push("pl");
+          break;
+        case "bs":
+          patternMatches.push("bs");
+          break;
       }
     }
   }
@@ -165,6 +179,10 @@ async function selectBestTable(
         - Customer payments/invoices → invoice or ar
         - Vendor payments → payment or ap  
         - Outstanding amounts → ar (customer owes us) or ap (we owe supplier)
+        - Profit/Loss, net income, or financial performance → pl
+        - Balance sheet, assets, liabilities, or equity → bs
+        - Cash movement, inflow/outflow, liquidity → cash_flow
+
 
         Respond with ONLY the table name.
       `.trim(),
@@ -332,15 +350,38 @@ async function loadChain(session_id) {
               - "Reference PAY-123" → WHERE supplier_invoices ILIKE '%pay-123%'
               - "how much we pay for Photographer in 2025 ?" → WHERE expenses_type ILIKE '%photographer%' OR expenses_detail ILIKE '%photographer%'
 
-            6. **pl** (Profit and Loss) table:
+            6. **bs** (Balance Sheet) table:
+              - String input → Match against: name
+              - convert date to range for specific searches like "23 january 2025" -> where month = 'jan 2025' and week = 'week 4'
+                Convert the date into:
+                month = month name (e.g. 'jan 2025')
+                week = ISO week-of-month (weeks start Monday, first Monday of the month defines week 1)
+              - Use ILIKE for case-insensitive matching
+              - Use % wildcards for partial matches
+              Examples:
+              - "Balance for January 2025" → from bs WHERE month = 'jan 2025' 
+              - "Balance week 4" → WHERE week = 'week 4'
+              - "Balance for January 25 2025" → WHERE month = 'jan 2025' and week = 'week 4'
+              - "Balance for 2860 rbc line credit" → WHERE name ILIKE '%2860 rbc line credit%'
+
+            7. **pl** (Profit and Loss) table:
               - String input → Match against: name
               - Code input → Match against: date (if applicable)
               - date can be used for specific searches like date >= '2024-01-01'::date
 
-            7. **bs** (Balance Sheet) table:
+            8. **cash_flow** table:
               - String input → Match against: name
-              - Code input → Match against: date (if applicable)
-              - date can be used for specific searches like date >= '2024-01-01'
+              - convert date to range for specific searches like "23 january 2025" -> where month = 'jan 2025' and week = 'week 4'
+                Convert the date into:
+                month = month name (e.g. 'jan 2025')
+                week = ISO week-of-month (weeks start Monday, first Monday of the month defines week 1)
+              - Use ILIKE for case-insensitive matching
+              - Use % wildcards for partial matches
+            - Examples:
+              - "Cash flow for January 2025" → WHERE month = 'jan 2025' 
+              - "Cash flow week 4" → WHERE week = 'week 4'
+              - "Cash flow for January 25 2025" → WHERE month = 'jan 2025' and week = 'week 4'
+              - "Cash flow for 2860 rbc line credit" → WHERE name ILIKE '%2860 rbc line credit%'
 
             QUERY CONSTRUCTION LOGIC:
             - For "what is [item] for [person]" → SELECT * to show all deal details
@@ -563,12 +604,6 @@ async function loadChain(session_id) {
               If there's an error, explain it conversationally:
               "I couldn't find any deals matching that name. You might want to try searching for a partial match instead."
             
-            EXAMPLE OUTPUT STYLE:
-            "Venterra generated $1,295 in total revenue from one deal.
-            
-            Looking at the details, this appears to be the only deal recorded under that exact name. The amount represents the complete revenue from this single transaction.
-            
-            What's worth noting is that there aren't any other Venterra deals in the system, so this $1,295 represents their entire relationship value so far."
           `.trim(),
         },
         { role: "user", content: input },
@@ -653,39 +688,39 @@ async function loadChain(session_id) {
   };
 }
 
-//Batch query support
-async function batchQuery(session_id, questions) {
-  const chain = await loadChain(session_id);
-  const results = [];
+// //Batch query support
+// async function batchQuery(session_id, questions) {
+//   const chain = await loadChain(session_id);
+//   const results = [];
 
-  for (let i = 0; i < questions.length; i++) {
-    const question = questions[i];
-    try {
-      const result = await chain({ input: question });
-      results.push({ question, result, success: true });
-    } catch (error) {
-      results.push({ question, error: error.message, success: false });
-    }
-  }
+//   for (let i = 0; i < questions.length; i++) {
+//     const question = questions[i];
+//     try {
+//       const result = await chain({ input: question });
+//       results.push({ question, result, success: true });
+//     } catch (error) {
+//       results.push({ question, error: error.message, success: false });
+//     }
+//   }
 
-  return results;
-}
+//   return results;
+// }
 
-//Query performance analytics
-async function getQueryAnalytics(session_id) {
-  const metadata = await getSessionMetadata(session_id);
-  return {
-    totalQueries: metadata?.query_count || 0,
-    avgExecutionTime: metadata?.avg_execution_time || 0,
-    lastUsedTable: metadata?.last_table,
-    successRate: metadata?.success_rate || 100,
-    commonTables: metadata?.table_usage || {},
-  };
-}
+// //Query performance analytics
+// async function getQueryAnalytics(session_id) {
+//   const metadata = await getSessionMetadata(session_id);
+//   return {
+//     totalQueries: metadata?.query_count || 0,
+//     avgExecutionTime: metadata?.avg_execution_time || 0,
+//     lastUsedTable: metadata?.last_table,
+//     successRate: metadata?.success_rate || 100,
+//     commonTables: metadata?.table_usage || {},
+//   };
+// }
 
 module.exports = {
   loadChain,
-  batchQuery,
-  getQueryAnalytics,
   selectBestTable, 
+  // batchQuery,
+  // getQueryAnalytics,
 };

@@ -668,3 +668,50 @@
 // if (columnGuidance.length > 0) {
 //   sqlPrompt[0].content += `\n\nSPECIFIC GUIDANCE FOR THIS QUERY:\n${columnGuidance.join('\n')}`;
 // }
+
+
+public async Task SendPostRequestAsync()
+{
+    // Create the HttpClient
+    using (var client = new HttpClient())
+    {
+        // Define the data to send
+        var requestData = new
+        {
+            name = "John Doe",
+            age = 30
+        };
+
+        // Serialize the data to JSON
+        var json = JsonConvert.SerializeObject(requestData);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        // Send the POST request
+        var response = await client.PostAsync("https://your-api-url.com/api/endpoint", content);
+
+        // Read the response
+        if (response.IsSuccessStatusCode)
+        {
+            string result = await response.Content.ReadAsStringAsync();
+            Console.WriteLine("Success: " + result);
+        }
+        else
+        {
+            Console.WriteLine("Error: " + response.StatusCode);
+        }
+    }
+}
+
+
+var Cht = new ChatModel
+ {
+     session_id = _session_id.Text,
+     table = _table.Text,
+      message = _message.Text
+ };
+ var httpClient = new HttpClient();
+ string Json = JsonConvert.SerializeObject(Cht);
+ HttpContent httpContent = new StringContent(Json);
+ httpContent.Headers.ContentType = new MediaTypeHeaderValue("application/Json");
+ httpClient.PutAsync(string.Format("https://accountingai-production.up.railway.app/chat?/{0}", Id), httpContent);
+ DisplayAlert("Added", "Your Data has been Update", "OK");

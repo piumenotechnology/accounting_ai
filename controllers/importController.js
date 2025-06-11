@@ -1,6 +1,6 @@
-const { fetchAllSheetsData, insert_bs, insert_pl, insert_cash_flow} = require('../services/insert/googleSheetsService');
+const { fetchAllSheetsData } = require('../services/insert/googleSheetsService');
 const { mapSheetsData } = require('../services/insert/mappingService');
-const { insertMappedData } = require('../services/insert/insertService');
+const { insertMappedData, insert_pl, insert_bs, insert_cash_flow } = require('../services/insert/insertService');
 
 
 async function handleImport(req, res) {

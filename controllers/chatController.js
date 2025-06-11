@@ -13,9 +13,9 @@ async function handleChat(req, res) {
 
     const chain = await loadChain(session_id); // Load the chain for the session
     
-    const response = await chain({ input: message.toLowerCase(), table: table.toLowerCase() }); // Pass the table name to the chain
+    const response = await chain({ input: message.toLowerCase(), table: table.toLowerCase() });
 
-    res.json({ response });
+    res.json({ "data":response });
   } catch (error) {
     console.error('❌ Error in handleChat:', error.message);
     res.status(500).json({
