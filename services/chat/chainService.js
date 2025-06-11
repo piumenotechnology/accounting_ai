@@ -282,7 +282,7 @@ async function loadChain(session_id) {
       const sessionMetadata = (await getSessionMetadata(session_id)) || {};
 
       // STEP 1: Enhanced table selection
-      let selectedTable = table;
+      let selectedTable = table.toLowerCase();
       if (!selectedTable) {
         selectedTable = await selectBestTable(
           input,
