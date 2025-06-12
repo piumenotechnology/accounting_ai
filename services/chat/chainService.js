@@ -68,7 +68,6 @@ const BUSINESS_PATTERNS = {
   bs: ["balance sheet", "assets", "liabilities", "equity", "financial position", "capital"]
 };
 
-
 function cleanSQL(text) {
   return text
     .toLowerCase()

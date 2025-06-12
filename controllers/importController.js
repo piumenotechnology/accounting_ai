@@ -1,6 +1,6 @@
 const { fetchAllSheetsData } = require('../services/insert/googleSheetsService');
 const { mapSheetsData } = require('../services/insert/mappingService');
-const { insertMappedData, insert_pl, insert_bs, insert_cash_flow } = require('../services/insert/insertService');
+const { insertMappedData, insert_pl, insert_bs, insert_cash_flow, getDataWithoutBackground } = require('../services/insert/insertService');
 
 
 async function handleImport(req, res) {
@@ -55,8 +55,20 @@ async function handleInsertCashFlow(req, res) {
   }
 } 
 
+// Function to get data without background color
+async function getDataWithoutBackground1(req, res) {
+  try {
+    const data = await getDataWithoutBackground();
+    res.json(data);
+  } catch (error) {
+    console.error('❌ Error fetching data without background:', error.message);
+    res.status(500).json({ error: 'Failed to fetch data without background.' });
+  }
+}
+
 
 module.exports = { handleImport, 
                    handleInsertBS, 
                    handleInsertPL, 
-                   handleInsertCashFlow };
+                   handleInsertCashFlow,
+                  getDataWithoutBackground1 };

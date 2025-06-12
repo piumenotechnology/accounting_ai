@@ -3,7 +3,6 @@ const app = express();
 const cors = require('cors')
 require('dotenv').config();
 const { connectRedis } = require('./services/redisClient');
-const { runSQL } = require('./services/databaseService');
 
 // Import Routes
 const chatRoutes = require('./routes/chatRoutes');

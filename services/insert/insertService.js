@@ -1,6 +1,7 @@
 const { pgClient } = require('../databaseService');
 const { sheets } = require('./googleSheetsService');
 
+const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
 async function insertMappedData(mappedData) {
   for (const [tableName, rows] of Object.entries(mappedData)) {
@@ -47,8 +48,6 @@ function getWeekOfMonth(date) {
 }
 
 async function insert_pl() {
-  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
-
   // 1. Fetch data from Google Sheets
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
@@ -96,8 +95,6 @@ async function insert_pl() {
 }
 
 async function insert_bs() {
-  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
-
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
     range: 'BS', // Replace with your actual sheet/tab name
@@ -165,8 +162,6 @@ async function insert_bs() {
 }
 
 async function insert_cash_flow() {
-  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
-
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
     range: 'CASH FLOW', 
@@ -233,4 +228,34 @@ async function insert_cash_flow() {
   return longFormat;
 }
 
-module.exports = { insertMappedData, insert_pl, insert_bs, insert_cash_flow };
+async function getDataWithoutBackground() {
+  const res = await sheets.spreadsheets.get({
+    spreadsheetId,
+    ranges: ['CASH FLOW'],
+    includeGridData: true,
+  });
+
+  const rows = res.data.sheets[0].data[0].rowData;
+  const result = [];
+
+  for (const row of rows) {
+    const values = [];
+    for (const cell of row.values || []) {
+      const bg = cell.effectiveFormat?.backgroundColor;
+      const hasNoFill =
+        !bg || (bg.red === 1 && bg.green === 1 && bg.blue === 1); // white or default
+
+      if (hasNoFill) {
+        values.push(cell.formattedValue || '');
+      } else {
+        values.push(null);
+      }
+    }
+    result.push(values);
+  }
+
+  console.log(result);
+  return result;
+}
+
+module.exports = { insertMappedData, insert_pl, insert_bs, insert_cash_flow, getDataWithoutBackground };
