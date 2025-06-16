@@ -15,6 +15,7 @@ connectRedis(); // 🔌 Connect to Redis
 
 // Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // API Routes
 app.use('/chat', chatRoutes);
