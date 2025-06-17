@@ -39,120 +39,111 @@ async function insertMappedData(mappedData) {
   }
 }
 
-function getWeekOfMonth(date) {
-  const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-  const dayOfMonth = date.getDate();
-  const dayOfWeekOfFirst = startOfMonth.getDay(); // 0 = Sunday, 6 = Saturday
-  const week = Math.floor((dayOfMonth + dayOfWeekOfFirst - 1) / 7) + 1;
-  return `Week ${week}`;
-}
-
-// async function insert_pl() {
-//   // 1. Fetch data from Google Sheets
-//   const res = await sheets.spreadsheets.values.get({
-//     spreadsheetId,
-//     range: 'PL',
-//   });
-
-//   const rows = res.data.values;
-//   if (!rows || rows.length < 2) throw new Error('Not enough data');
-
-//   const dates = rows[0].slice(1); 
-//   const longFormat = [];
-
-//   // 2. Unpivot the table (wide → long format)
-//   for (let i = 1; i < rows.length; i++) {
-//     const row = rows[i];
-//     const name = row[0].toLowerCase(); 
-
-//     for (let j = 1; j < row.length; j++) {
-//       const rawDate = dates[j - 1];
-//       const date = new Date(rawDate); 
-//       const amount = parseFloat(row[j]) || 0;
-
-//       longFormat.push({ date, name, amount });
-//     }
-//   }
-
-//   // try {
-//   //   await pgClient.query(`DELETE FROM pl`);
-//   //   await pgClient.query('BEGIN');
-
-//   //   const insertSQL = 'INSERT INTO pl (date, name, amount) VALUES ($1, $2, $3)';
-
-//   //   for (const entry of longFormat) {
-//   //     await pgClient.query(insertSQL, [entry.date, entry.name, entry.amount]);
-//   //   }
-
-//   //   await pgClient.query('COMMIT');
-//   //   console.log('✅ Data inserted successfully.');
-//   // } catch (err) {
-//   //   await pgClient.query('ROLLBACK');
-//   //   console.error('❌ Insert failed:', err);
-//   // }
-
-//   return longFormat;
+// function getWeekOfMonth(date) {
+//   const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+//   const dayOfMonth = date.getDate();
+//   const dayOfWeekOfFirst = startOfMonth.getDay(); // 0 = Sunday, 6 = Saturday
+//   const week = Math.floor((dayOfMonth + dayOfWeekOfFirst - 1) / 7) + 1;
+//   return `Week ${week}`;
 // }
 
-// async function insert_bs() {
-//   const res = await sheets.spreadsheets.values.get({
+// async function insert_cash_flow() {
+//   const res = await sheets.spreadsheets.get({
 //     spreadsheetId,
-//     range: 'BS', // Replace with your actual sheet/tab name
+//     ranges: ['CASH FLOW'],
+//     includeGridData: true,
 //   });
 
-//   const rows = res.data.values;
-//   if (!rows || rows.length < 2) throw new Error('Not enough data');
+//   const grid = res.data.sheets[0].data[0].rowData;
+//   if (!grid || grid.length < 2) throw new Error('Not enough data');
 
-//   const weekLabels = rows[0].slice(1); // e.g., "Jan. 1–4, 2025"
+//   const monthMap = {
+//     Jan: 'january', Feb: 'february', Mar: 'march',
+//     Apr: 'april', May: 'may', Jun: 'june',
+//     Jul: 'july', Aug: 'august', Sep: 'september',
+//     Oct: 'october', Nov: 'november', Dec: 'december'
+//   };
+
+//   const monthYearLabels = grid[0].values.slice(1).map(cell => cell.formattedValue);
 //   const longFormat = [];
 
-//   for (let i = 1; i < rows.length; i++) {
-//     const row = rows[i];
-//     const name = row[0];
+//   let currentActivity = '';
 
-//     for (let j = 1; j < row.length; j++) {
-//       const weekLabel = weekLabels[j - 1]; // "Jan. 1–4, 2025"
-//       const amount = parseFloat(row[j]) || 0;
+//   for (let i = 1; i < grid.length; i++) {
+//     const row = grid[i];
+//     if (!row || !row.values) continue;
 
-//       // Parse date from label
-//       const match = weekLabel.match(/([A-Za-z]+)\.? (\d{1,2})[–-]/);
-//       const yearMatch = weekLabel.match(/(\d{4})$/);
-//       if (!match || !yearMatch) continue;
+//     const nameCell = row.values[0];
+//     if (!nameCell || !nameCell.formattedValue) continue;
 
-//       const monthText = match[1]; // Jan
-//       const day = match[2]; // 1
-//       const year = yearMatch[1]; // 2025
+//     const rawName = nameCell.formattedValue.trim();
+//     const name = rawName.toLowerCase();
 
-//       const dateStr = `${monthText} ${day}, ${year}`;
-//       const parsedDate = new Date(dateStr);
-//       if (isNaN(parsedDate)) continue;
+//     // Log and check background color of the name cell
+//     const bg = nameCell.effectiveFormat?.backgroundColor;
+//     const isBlue = bg && bg.blue > 0.6 && (bg.red ?? 1) < 0.4;
+//     if (isBlue) {
+//       currentActivity = rawName.toLowerCase().replace(' activities', '').trim();
+//       console.log(`🔵 Activity set to: ${currentActivity}`);
+//       continue;
+//     }
 
-//       // Format as "Jan 2025"
-//       const month = `${parsedDate.toLocaleString('en-US', { month: 'short' })} ${parsedDate.getFullYear()}`;
-//       const week = getWeekOfMonth(parsedDate);
+//     for (let j = 1; j < row.values.length; j++) {
+//       const cell = row.values[j];
+//       if (!cell || !cell.formattedValue) continue;
 
+//       const label = monthYearLabels[j - 1];
+//       if (!label) continue;
+
+//       // Skip cells with background color (not plain white)
+//       const cellBg = cell.effectiveFormat?.backgroundColor;
+//       const isCellColored = cellBg && (
+//         (cellBg.red ?? 1) !== 1 ||
+//         (cellBg.green ?? 1) !== 1 ||
+//         (cellBg.blue ?? 1) !== 1
+//       );
+//       if (isCellColored) continue;
+
+//       const cleanLabel = label.replace('.', '');
+//       const [abbrMonth, year] = cleanLabel.split(' ');
+//       const fullMonth = monthMap[abbrMonth];
+//       if (!fullMonth || !year) continue;
+
+//       const amount = parseFloat(cell.formattedValue) || 0;
+//       const type = name === 'net income' ? 'net_income' : 'net_cost';
 
 //       longFormat.push({
-//         date: parsedDate,
-//         month : month.toLowerCase(),
-//         week: week.toLowerCase(),
-//         name: name.toLowerCase(),
-//         amount
+//         name,
+//         month: fullMonth,
+//         year,
+//         amount,
+//         type,
+//         activity: currentActivity
 //       });
 //     }
 //   }
 
 //   try {
-//     await pgClient.query(`DELETE FROM bs`);
+//     await pgClient.query(`DELETE FROM cash_flow`);
 //     await pgClient.query('BEGIN');
-//     const insertSQL = 'INSERT INTO bs (date, month, week, name, amount) VALUES ($1, $2, $3, $4, $5)';
+//     const insertSQL = `
+//       INSERT INTO cash_flow (name, month, year, amount, type, activity)
+//       VALUES ($1, $2, $3, $4, $5, $6)
+//     `;
 
 //     for (const entry of longFormat) {
-//       await pgClient.query(insertSQL, [entry.date, entry.month, entry.week, entry.name, entry.amount]);
+//       await pgClient.query(insertSQL, [
+//         entry.name,
+//         entry.month,
+//         entry.year,
+//         entry.amount,
+//         entry.type,
+//         entry.activity
+//       ]);
 //     }
 
 //     await pgClient.query('COMMIT');
-//     console.log('✅ Data with month and week inserted.');
+//     console.log('✅ Data inserted with type and activity.');
 //   } catch (err) {
 //     await pgClient.query('ROLLBACK');
 //     console.error('❌ Insert failed:', err);
@@ -161,214 +152,110 @@ function getWeekOfMonth(date) {
 //   return longFormat;
 // }
 
-async function insert_bs() {
-  const res = await sheets.spreadsheets.get({
-    spreadsheetId,
-    ranges: ['BS'],
-    includeGridData: true,
-  });
+// async function insert_bs() {
+//   const res = await sheets.spreadsheets.get({
+//     spreadsheetId,
+//     ranges: ['BS!A1:M212'],
+//     includeGridData: true,
+//   });
 
-  const grid = res.data.sheets[0].data[0].rowData;
-  if (!grid || grid.length < 2) throw new Error('Not enough data');
+//   const grid = res.data.sheets[0].data[0].rowData;
+//   if (!grid || grid.length < 2) throw new Error('Not enough data');
 
-  const monthMap = {
-    Jan: 'january', Feb: 'february', Mar: 'march',
-    Apr: 'april', May: 'may', Jun: 'june',
-    Jul: 'july', Aug: 'august', Sep: 'september',
-    Oct: 'october', Nov: 'november', Dec: 'december'
-  };
+//   const monthMap = {
+//     Jan: 'january', Feb: 'february', Mar: 'march',
+//     Apr: 'april', May: 'may', Jun: 'june',
+//     Jul: 'july', Aug: 'august', Sep: 'september',
+//     Oct: 'october', Nov: 'november', Dec: 'december'
+//   };
 
-  const monthYearLabels = grid[0].values.slice(1).map(cell => cell.formattedValue);
-  const longFormat = [];
+//   const monthYearLabels = grid[0].values.slice(1).map(cell => cell.formattedValue);
+//   const longFormat = [];
 
-  let currentActivity = '';
+//   let currentActivity = '';
 
-  for (let i = 1; i < grid.length; i++) {
-    const row = grid[i];
-    if (!row || !row.values) continue;
+//   for (let i = 1; i < grid.length; i++) {
+//     const row = grid[i];
+//     if (!row || !row.values) continue;
 
-    const nameCell = row.values[0];
-    if (!nameCell || !nameCell.formattedValue) continue;
+//     const nameCell = row.values[0];
+//     if (!nameCell || !nameCell.formattedValue) continue;
 
-    const rawName = nameCell.formattedValue.trim();
-    const name = rawName.toLowerCase();
+//     const rawName = nameCell.formattedValue.trim();
+//     const name = rawName.toLowerCase();
 
-    // Log and check background color of the name cell
-    const bg = nameCell.effectiveFormat?.backgroundColor;
-    const isBlue = bg && bg.blue > 0.6 && (bg.red ?? 1) < 0.4;
-    if (isBlue) {
-      currentActivity = rawName.toLowerCase().trim();
-      console.log(`🔵 Activity set to: ${currentActivity}`);
-      continue;
-    }
+//     // Log and check background color of the name cell
+//     const bg = nameCell.effectiveFormat?.backgroundColor;
+//     const isBlue = bg && bg.blue > 0.6 && (bg.red ?? 1) < 0.4;
+//     if (isBlue) {
+//       currentActivity = rawName.toLowerCase().trim();
+//       console.log(`🔵 Activity set to: ${currentActivity}`);
+//       continue;
+//     }
 
-    for (let j = 1; j < row.values.length; j++) {
-      const cell = row.values[j];
-      if (!cell || !cell.formattedValue) continue;
+//     for (let j = 1; j < row.values.length; j++) {
+//       const cell = row.values[j];
+//       if (!cell || !cell.formattedValue) continue;
 
-      const label = monthYearLabels[j - 1];
-      if (!label) continue;
+//       const label = monthYearLabels[j - 1];
+//       if (!label) continue;
 
-      // Skip cells with background color (not plain white)
-      const cellBg = cell.effectiveFormat?.backgroundColor;
-      const isCellColored = cellBg && (
-        (cellBg.red ?? 1) !== 1 ||
-        (cellBg.green ?? 1) !== 1 ||
-        (cellBg.blue ?? 1) !== 1
-      );
-      if (isCellColored) continue;
+//       // Skip cells with background color (not plain white)
+//       const cellBg = cell.effectiveFormat?.backgroundColor;
+//       const isCellColored = cellBg && (
+//         (cellBg.red ?? 1) !== 1 ||
+//         (cellBg.green ?? 1) !== 1 ||
+//         (cellBg.blue ?? 1) !== 1
+//       );
+//       if (isCellColored) continue;
 
-      const cleanLabel = label.replace('.', '');
-      const [abbrMonth, year] = cleanLabel.split(' ');
-      const fullMonth = monthMap[abbrMonth];
-      if (!fullMonth || !year) continue;
+//       const cleanLabel = label.replace('.', '');
+//       const [abbrMonth, year] = cleanLabel.split(' ');
+//       const fullMonth = monthMap[abbrMonth];
+//       if (!fullMonth || !year) continue;
 
-      const amount = parseFloat(cell.formattedValue) || 0;
-      // const type = name === 'net income' ? 'net_income' : 'net_cost';
+//       const amount = parseFloat(cell.formattedValue) || 0;
+//       if (!amount) continue; // ✅ Skip null or 0 values)
+//       // const type = name === 'net income' ? 'net_income' : 'net_cost';
 
-      longFormat.push({
-        name,
-        month: fullMonth,
-        year,
-        amount,
-        type: currentActivity,
-      });
-    }
-  }
+//       longFormat.push({
+//         name,
+//         month: fullMonth,
+//         year,
+//         amount,
+//         type: currentActivity,
+//       });
+//     }
+//   }
 
-  try {
-    await pgClient.query(`DELETE FROM cash_flow`);
-    await pgClient.query('BEGIN');
-    const insertSQL = `
-      INSERT INTO cash_flow (name, month, year, amount, type, activity)
-      VALUES ($1, $2, $3, $4, $5, $6)
-    `;
+//   try {
+//     await pgClient.query(`DELETE FROM cash_flow`);
+//     await pgClient.query('BEGIN');
+//     const insertSQL = `
+//       INSERT INTO cash_flow (name, month, year, amount, type, activity)
+//       VALUES ($1, $2, $3, $4, $5, $6)
+//     `;
 
-    for (const entry of longFormat) {
-      await pgClient.query(insertSQL, [
-        entry.name,
-        entry.month,
-        entry.year,
-        entry.amount,
-        entry.type,
-        entry.activity
-      ]);
-    }
+//     for (const entry of longFormat) {
+//       await pgClient.query(insertSQL, [
+//         entry.name,
+//         entry.month,
+//         entry.year,
+//         entry.amount,
+//         entry.type,
+//         entry.activity
+//       ]);
+//     }
 
-    await pgClient.query('COMMIT');
-    console.log('✅ Data inserted with type and activity.');
-  } catch (err) {
-    await pgClient.query('ROLLBACK');
-    console.error('❌ Insert failed:', err);
-  }
+//     await pgClient.query('COMMIT');
+//     console.log('✅ Data inserted with type and activity.');
+//   } catch (err) {
+//     await pgClient.query('ROLLBACK');
+//     console.error('❌ Insert failed:', err);
+//   }
 
-  return longFormat;
-}
-
-async function insert_cash_flow() {
-  const res = await sheets.spreadsheets.get({
-    spreadsheetId,
-    ranges: ['CASH FLOW'],
-    includeGridData: true,
-  });
-
-  const grid = res.data.sheets[0].data[0].rowData;
-  if (!grid || grid.length < 2) throw new Error('Not enough data');
-
-  const monthMap = {
-    Jan: 'january', Feb: 'february', Mar: 'march',
-    Apr: 'april', May: 'may', Jun: 'june',
-    Jul: 'july', Aug: 'august', Sep: 'september',
-    Oct: 'october', Nov: 'november', Dec: 'december'
-  };
-
-  const monthYearLabels = grid[0].values.slice(1).map(cell => cell.formattedValue);
-  const longFormat = [];
-
-  let currentActivity = '';
-
-  for (let i = 1; i < grid.length; i++) {
-    const row = grid[i];
-    if (!row || !row.values) continue;
-
-    const nameCell = row.values[0];
-    if (!nameCell || !nameCell.formattedValue) continue;
-
-    const rawName = nameCell.formattedValue.trim();
-    const name = rawName.toLowerCase();
-
-    // Log and check background color of the name cell
-    const bg = nameCell.effectiveFormat?.backgroundColor;
-    const isBlue = bg && bg.blue > 0.6 && (bg.red ?? 1) < 0.4;
-    if (isBlue) {
-      currentActivity = rawName.toLowerCase().replace(' activities', '').trim();
-      console.log(`🔵 Activity set to: ${currentActivity}`);
-      continue;
-    }
-
-    for (let j = 1; j < row.values.length; j++) {
-      const cell = row.values[j];
-      if (!cell || !cell.formattedValue) continue;
-
-      const label = monthYearLabels[j - 1];
-      if (!label) continue;
-
-      // Skip cells with background color (not plain white)
-      const cellBg = cell.effectiveFormat?.backgroundColor;
-      const isCellColored = cellBg && (
-        (cellBg.red ?? 1) !== 1 ||
-        (cellBg.green ?? 1) !== 1 ||
-        (cellBg.blue ?? 1) !== 1
-      );
-      if (isCellColored) continue;
-
-      const cleanLabel = label.replace('.', '');
-      const [abbrMonth, year] = cleanLabel.split(' ');
-      const fullMonth = monthMap[abbrMonth];
-      if (!fullMonth || !year) continue;
-
-      const amount = parseFloat(cell.formattedValue) || 0;
-      const type = name === 'net income' ? 'net_income' : 'net_cost';
-
-      longFormat.push({
-        name,
-        month: fullMonth,
-        year,
-        amount,
-        type,
-        activity: currentActivity
-      });
-    }
-  }
-
-  try {
-    await pgClient.query(`DELETE FROM cash_flow`);
-    await pgClient.query('BEGIN');
-    const insertSQL = `
-      INSERT INTO cash_flow (name, month, year, amount, type, activity)
-      VALUES ($1, $2, $3, $4, $5, $6)
-    `;
-
-    for (const entry of longFormat) {
-      await pgClient.query(insertSQL, [
-        entry.name,
-        entry.month,
-        entry.year,
-        entry.amount,
-        entry.type,
-        entry.activity
-      ]);
-    }
-
-    await pgClient.query('COMMIT');
-    console.log('✅ Data inserted with type and activity.');
-  } catch (err) {
-    await pgClient.query('ROLLBACK');
-    console.error('❌ Insert failed:', err);
-  }
-
-  return longFormat;
-}
+//   return longFormat;
+// }
 
 async function insert_pl() {
   const res = await sheets.spreadsheets.get({
@@ -432,6 +319,7 @@ async function insert_pl() {
       if (isNaN(date)) continue;
 
       const amount = parseFloat(cell.formattedValue) || 0;
+      if (!amount) continue;
 
       longFormat.push({ date, code, name, type, amount });
     }
@@ -462,5 +350,289 @@ async function insert_pl() {
 
   return longFormat;
 }
+
+
+async function insert_cash_flow() {
+  const res = await sheets.spreadsheets.get({
+    spreadsheetId,
+    ranges: ['CASH FLOW!A1:M38'],
+    includeGridData: true,
+  });
+
+  const grid = res.data.sheets[0].data[0].rowData;
+  if (!grid || grid.length < 2) throw new Error('Not enough data');
+
+  const monthMap = {
+    Jan: 'january', Feb: 'february', Mar: 'march',
+    Apr: 'april', May: 'may', Jun: 'june',
+    Jul: 'july', Aug: 'august', Sep: 'september',
+    Oct: 'october', Nov: 'november', Dec: 'december'
+  };
+
+  const monthYearLabels = grid[0].values.slice(1).map(cell => cell.formattedValue);
+  const longFormat = [];
+
+  let currentActivity = '';
+
+  for (let i = 1; i < grid.length; i++) {
+    const row = grid[i];
+    if (!row || !row.values) continue;
+
+    const nameCell = row.values[0];
+    if (!nameCell || !nameCell.formattedValue) continue;
+
+    const rawName = nameCell.formattedValue.trim();
+    const name = rawName.toLowerCase();
+
+    // Check if name cell has a blue background
+    const bg = nameCell.effectiveFormat?.backgroundColor;
+    const isBlue = bg && bg.blue > 0.6 && (bg.red ?? 1) < 0.4;
+    if (isBlue) {
+      let cleanName = rawName.toLowerCase().trim();
+      if (cleanName.endsWith(' activities')) {
+        cleanName = cleanName.replace(' activities', '');
+      }
+      currentActivity = cleanName.trim();
+      console.log(`🔵 Activity set to: ${currentActivity}`);
+      continue;
+    }
+
+    for (let j = 1; j < row.values.length; j++) {
+      const cell = row.values[j];
+      if (!cell || !cell.formattedValue) continue;
+
+      const label = monthYearLabels[j - 1];
+      if (!label) continue;
+
+      const cellBg = cell.effectiveFormat?.backgroundColor;
+
+      const isRedBg = cellBg &&
+        (cellBg.red ?? 0) > 0.6 &&
+        (cellBg.green ?? 0) < 0.4 &&
+        (cellBg.blue ?? 0) < 0.4;
+
+      const isNonWhite = cellBg && (
+        (cellBg.red ?? 1) !== 1 ||
+        (cellBg.green ?? 1) !== 1 ||
+        (cellBg.blue ?? 1) !== 1
+      );
+
+      // Skip all non-white, non-red backgrounds
+      if (isNonWhite && !isRedBg) continue;
+
+      const cleanLabel = label.replace('.', '');
+      const [abbrMonth, year] = cleanLabel.split(' ');
+      const fullMonth = monthMap[abbrMonth];
+      if (!fullMonth || !year) continue;
+
+      const amount = parseFloat(cell.formattedValue) || 0;
+      if (!amount) continue; // ✅ Skip null or 0 values
+
+      // const category = isRedBg ? 'analysis' : (name === 'net income' ? 'net_income' : 'net_cash');
+
+      let category = 'net_cash';
+      let activity_type = currentActivity;
+
+      // Determine category and possibly override activity_type based on `name`
+      const lowerName = name.toLowerCase().trim();
+
+      if (lowerName === 'net income') {
+        category = 'net_income';
+      } else if (
+        lowerName === 'total adjustments to reconcile net income to net cash provided by operations:'
+      ) {
+        category = 'subtotal';
+      } else if (lowerName.includes('net cash increase for period')) {
+        category = 'summary';
+        activity_type = 'summary';
+      } else if (lowerName.includes('net cash provided')) {
+        category = 'total';
+      }
+
+      const date = new Date(`${fullMonth} 1, ${year}`);
+      const dbDate = `${year}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
+
+      longFormat.push({
+        name,
+        month: fullMonth,
+        year,
+        amount,
+        category,
+        activity_type,
+        date : dbDate
+      });
+    }
+  }
+
+  try {
+    await pgClient.query(`DELETE FROM cash_flow`);
+    await pgClient.query('BEGIN');
+    const insertSQL = `
+      INSERT INTO cash_flow (name, month, year, amount, category, activity_type, date_)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `;
+
+    for (const entry of longFormat) {
+      await pgClient.query(insertSQL, [
+        entry.name,
+        entry.month,
+        entry.year,
+        entry.amount,
+        entry.category,
+        entry.activity_type,
+        entry.date,
+      ]);
+    }
+
+    await pgClient.query('COMMIT');
+    console.log('✅ Data inserted with type and activity.');
+  } catch (err) {
+    await pgClient.query('ROLLBACK');
+    console.error('❌ Insert failed:', err);
+  }
+  return longFormat;
+}
+
+async function insert_bs() {
+  const res = await sheets.spreadsheets.get({
+    spreadsheetId,
+    ranges: ['BS!A1:M212'],
+    includeGridData: true,
+  });
+
+  const grid = res.data.sheets[0].data[0].rowData;
+  if (!grid || grid.length < 2) throw new Error('Not enough data');
+
+  const monthMap = {
+    Jan: 'january', Feb: 'february', Mar: 'march',
+    Apr: 'april', May: 'may', Jun: 'june',
+    Jul: 'july', Aug: 'august', Sep: 'september',
+    Oct: 'october', Nov: 'november', Dec: 'december'
+  };
+
+  const monthYearLabels = grid[0].values.slice(1).map(cell => cell.formattedValue);
+  const longFormat = [];
+
+  let currentCategory, currentType, currentSubCategory  = '';
+
+  for (let i = 1; i < grid.length; i++) {
+    const row = grid[i];
+    if (!row || !row.values) continue;
+
+    const nameCell = row.values[0];
+    if (!nameCell || !nameCell.formattedValue) continue;
+
+    const rawName = nameCell.formattedValue.trim();
+    const account_name = rawName.toLowerCase();
+
+    // Check if name cell has a blue background
+    const bg = nameCell.effectiveFormat?.backgroundColor;
+    const isGreen = bg && bg.green > 0.6 && (bg.red ?? 1) < 0.5 && (bg.blue ?? 1) < 0.5;
+    if(isGreen) {
+      currentCategory = account_name.replace(/ /g, "_");
+      console.log(`🟢 Category set to: ${currentCategory}`)
+      continue;
+    }
+
+    const isBlue = bg && bg.blue > 0.6 && (bg.red ?? 1) < 0.4;
+    if (isBlue) {
+      currentCategory = account_name.replace(/ /g, "_");
+      console.log(`🔵 Category set to: ${currentCategory}`);
+      continue;
+    }
+
+    const isYellow = bg && (bg.red ?? 0) > 0.8 && (bg.green ?? 0) > 0.7 && (bg.blue ?? 1) < 0.3;
+    if(isYellow) {
+      currentSubCategory = account_name.replace(/ /g, "_");
+      console.log(`🟡 Category set to: ${currentSubCategory}`)
+      continue;
+    }
+
+    // const isRed = bg && (bg.red ?? 0) > 0.7 && (bg.green ?? 1) < 0.4 && (bg.blue ?? 1) < 0.4;
+
+    for (let j = 1; j < row.values.length; j++) {
+      const cell = row.values[j];
+      if (!cell || !cell.formattedValue) continue;
+
+      const label = monthYearLabels[j - 1];
+      if (!label) continue;
+
+      const cellBg = cell.effectiveFormat?.backgroundColor;
+
+      const isRedBg = cellBg &&
+        (cellBg.red ?? 0) > 0.6 &&
+        (cellBg.green ?? 0) < 0.4 &&
+        (cellBg.blue ?? 0) < 0.4;
+
+      const isNonWhite = cellBg && (
+        (cellBg.red ?? 1) !== 1 ||
+        (cellBg.green ?? 1) !== 1 ||
+        (cellBg.blue ?? 1) !== 1
+      );
+
+      // Skip all non-white, non-red backgrounds
+      if (isNonWhite && !isRedBg) continue;
+
+      const cleanLabel = label.replace('.', '');
+      const [abbrMonth, year] = cleanLabel.split(' ');
+      const fullMonth = monthMap[abbrMonth];
+      if (!fullMonth || !year) continue;
+
+      const amount = parseFloat(cell.formattedValue) || 0;
+      if (!amount) continue; // ✅ Skip null or 0 values
+
+      let activity_type = currentType;
+      let category = currentCategory;
+      let sub_category = currentSubCategory;
+
+      let line_type = isRedBg ? 'total' : 'data';
+      
+
+      // Determine category and possibly override activity_type based on `name`
+      const lowerName = account_name.toLowerCase().trim();
+
+      longFormat.push({
+        account_name,
+        month: fullMonth,
+        year,
+        amount,
+        activity_type, 
+        category,
+        sub_category,
+        line_type
+      });
+    }
+  }
+
+  try {
+    await pgClient.query(`DELETE FROM cash_flow`);
+    await pgClient.query('BEGIN');
+    const insertSQL = `
+      INSERT INTO bs (account_name, month, year, amount, activity_type, category, sub_category, line_type)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `;
+
+    for (const entry of longFormat) {
+      await pgClient.query(insertSQL, [
+        entry.account_name,
+        entry.month,
+        entry.year,
+        entry.amount,
+        entry.activity_type,
+        entry.category,
+        entry.sub_category,
+        entry.line_type,
+      ]);
+    }
+
+    await pgClient.query('COMMIT');
+    console.log('✅ Data inserted with type and activity.');
+  } catch (err) {
+    await pgClient.query('ROLLBACK');
+    console.error('❌ Insert failed:', err);
+  }
+  return longFormat;
+}
+
 
 module.exports = { insertMappedData, insert_pl, insert_bs, insert_cash_flow };
