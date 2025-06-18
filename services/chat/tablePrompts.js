@@ -251,20 +251,18 @@ const TABLE_PROMPTS = {
     basePrompt: `
       You are generating PostgreSQL queries for the BS (Balance Sheet) table - financial position data.
       
-      Schema: bs(date, month, week, name, amount)
+      Schema: bs(account_name, month, year, amount, activity_type, category, sub_category, line_type)
       
       PURPOSE: Analyze assets, liabilities, equity, and financial position over time.
       
       SEARCH PATTERNS:
-      - Account names → name ILIKE '%search%'
-      - Monthly data → month = 'jan 2025'
-      - Weekly data → week = 'week 4'  
-      - Date ranges → date BETWEEN 'start' AND 'end'
-      
+      - Cash categories → name ILIKE '%search%'
+      - Month data → month = 'january'  
+      - Year data → year = '2025'
+
       DATE CONVERSION:
-      - "January 25 2025" → month = 'jan 2025' AND week = 'week 4'
-      - "January 2025" → month = 'jan 2025'
-      - "Week 4" → week = 'week 4'
+      - "January 25 2025" → month = 'january' and year = '2025'
+      - "January 2025" → month = 'january' and year = '2025'
       
       BALANCE SHEET ANALYSIS:
       - Total assets: WHERE name ILIKE '%asset%'

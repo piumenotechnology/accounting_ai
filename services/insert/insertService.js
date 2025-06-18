@@ -529,21 +529,33 @@ async function insert_bs() {
     const bg = nameCell.effectiveFormat?.backgroundColor;
     const isGreen = bg && bg.green > 0.6 && (bg.red ?? 1) < 0.5 && (bg.blue ?? 1) < 0.5;
     if(isGreen) {
-      currentCategory = account_name.replace(/ /g, "_");
-      console.log(`🟢 Category set to: ${currentCategory}`)
+      // currentCategory = account_name
+      //   .toLowerCase()
+      //   .replace(/\s*\(.*?\)\s*/g, '')   // remove parentheses and contents
+      //   .replace(/[^a-z0-9]+/g, '_')     // replace non-alphanumeric with "_"
+      //   .replace(/^_+|_+$/g, '');   
+      // console.log(`🟢 Category set to: ${currentCategory}`)
       continue;
     }
 
     const isBlue = bg && bg.blue > 0.6 && (bg.red ?? 1) < 0.4;
     if (isBlue) {
-      currentCategory = account_name.replace(/ /g, "_");
+      currentCategory = account_name
+        .toLowerCase()
+        .replace(/\s*\(.*?\)\s*/g, '')   // remove parentheses and contents
+        .replace(/[^a-z0-9]+/g, '_')     // replace non-alphanumeric with "_"
+        .replace(/^_+|_+$/g, ''); 
       console.log(`🔵 Category set to: ${currentCategory}`);
       continue;
     }
 
     const isYellow = bg && (bg.red ?? 0) > 0.8 && (bg.green ?? 0) > 0.7 && (bg.blue ?? 1) < 0.3;
     if(isYellow) {
-      currentSubCategory = account_name.replace(/ /g, "_");
+      currentSubCategory = account_name
+        .toLowerCase()
+        .replace(/\s*\(.*?\)\s*/g, '')   // remove parentheses and contents
+        .replace(/[^a-z0-9]+/g, '_')     // replace non-alphanumeric with "_"
+        .replace(/^_+|_+$/g, ''); 
       console.log(`🟡 Category set to: ${currentSubCategory}`)
       continue;
     }
