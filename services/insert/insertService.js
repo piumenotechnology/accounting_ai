@@ -762,11 +762,29 @@ async function insert_bs() {
       let category = currentCategory;
       let category_type = currentSubCategory;
 
-      let line_type = isRedBg ? 'total' : 'data';
+      let line_type = isRedBg ? 'subtotal' : 'data';
 
-      // if ( account_name === `total ${activity_type}`){
-      //   line_type = 'total'
-      // }
+      if (account_name === 'retained earnings' || account_name === 'profit for the year' || account_name === 'total liabilities and equity') {
+          activity_type = 'summary'
+          category = ''
+          category_type = ''
+          line_type = 'total'
+      }
+
+      if ( account_name === `total ${activity_type}`){
+        line_type = 'total'
+        category = ''
+        category_type = ''
+      }
+
+      if (activity_type === 'equity') {
+        category = ''
+        category_type = ''
+      }
+
+      if (category === 'non_current_liabilities') {
+        category_type = ''
+      }
 
       // console.log(sub_category)
 
@@ -782,8 +800,6 @@ async function insert_bs() {
       });
     }
   }
-
-  
 
   try {
     await pgClient.query(`DELETE FROM bs`);

@@ -246,17 +246,19 @@ const TABLE_PROMPTS = {
     
     keywords: ['profit', 'loss', 'income', 'revenue', 'expenses', 'net income', 'p&l']
   },
-
+  /*
+     category, category_type,  
+    - category: 'current_assets', 'non_current_assets', 'current_liabilities', 'non_current_liabilities', 'equity'
+    - category_type: e.g., 'cash_and_cash_equivalent', 'accounts_payable', 'accounts_receivable', 'credit_card', 'property_plant_and_equipment'
+ */
   bs: {
     basePrompt: `
       You are generating PostgreSQL queries for the BS (Balance Sheet) table - financial position data.
             
       🧾 TABLE SCHEMA:
-      bs(account_name, month, year, amount, activity_type, category, category_type, line_type)
+      bs(account_name, month, year, amount, activity_type, line_type)
 
       - activity_type: 'assets', 'liabilities', or 'equity'
-      - category: 'current_assets', 'non_current_assets', 'current_liabilities', 'non_current_liabilities', 'equity'
-      - category_type: e.g., 'cash_and_cash_equivalent', 'accounts_payable', 'accounts_receivable', 'credit_card', 'property_plant_and_equipment'
       - line_type: 'data', 'total'
 
       🎯 PURPOSE: Generate SQL queries to analyze company assets, liabilities, equity, and financial ratios over time.
