@@ -494,8 +494,6 @@ async function insert_cash_flow() {
   }
   return longFormat;
 }
-
-// async function insert_bs() {
 //   const res = await sheets.spreadsheets.get({
 //     spreadsheetId,
 //     ranges: ['BS!A1:M212'],
@@ -654,181 +652,215 @@ async function insert_cash_flow() {
 // } 
 
 async function insert_bs() {
-  const res = await sheets.spreadsheets.get({
-    spreadsheetId,
-    ranges: ['BS!A1:M212'],
-    includeGridData: true,
-  });
-
-  const grid = res.data.sheets[0].data[0].rowData;
-  if (!grid || grid.length < 2) throw new Error('Not enough data');
-
-  const monthMap = {
-    Jan: 'january', Feb: 'february', Mar: 'march',
-    Apr: 'april', May: 'may', Jun: 'june',
-    Jul: 'july', Aug: 'august', Sep: 'september',
-    Oct: 'october', Nov: 'november', Dec: 'december'
-  };
-
-  const monthYearLabels = grid[0].values.slice(1).map(cell => cell.formattedValue);
-  const longFormat = [];
-
-  let currentCategory, currentType, currentSubCategory  = '';
-
-  for (let i = 1; i < grid.length; i++) {
-    const row = grid[i];
-    if (!row || !row.values) continue;
-
-    const nameCell = row.values[0];
-    if (!nameCell || !nameCell.formattedValue) continue;
-
-    const rawName = nameCell.formattedValue.trim();
-    const account_name = rawName.toLowerCase();
-
-    if (/^total\s+\d+/i.test(account_name)) {
-      console.log("Skipped", account_name);
-      continue;
-    } 
-
-    // Check if name cell has a blue background
-    const bg = nameCell.effectiveFormat?.backgroundColor;
-    const isGreen = bg && bg.green > 0.6 && (bg.red ?? 1) < 0.5 && (bg.blue ?? 1) < 0.5;
-    if(isGreen) {
-      currentType = account_name
-        .toLowerCase()
-        .replace(/\s*\(.*?\)\s*/g, '')   // remove parentheses and contents
-        .replace(/[^a-z0-9]+/g, '_')     // replace non-alphanumeric with "_"
-        .replace(/^_+|_+$/g, '');   
-      console.log(`🟢 Category set to: ${currentType}`)
-      continue;
-    }
-
-    const isBlue = bg && bg.blue > 0.6 && (bg.red ?? 1) < 0.4;
-    if (isBlue) {
-      currentCategory = account_name
-        .toLowerCase()
-        .replace(/\s*\(.*?\)\s*/g, '')   
-        .replace(/[^a-z0-9]+/g, '_')     
-        .replace(/^_+|_+$/g, ''); 
-      console.log(`🔵 Category set to: ${currentCategory}`);
-      continue;
-    }
-
-    const isYellow = bg && (bg.red ?? 0) > 0.8 && (bg.green ?? 0) > 0.7 && (bg.blue ?? 1) < 0.3;
-    if(isYellow) {
-      currentSubCategory = account_name
-        .toLowerCase()
-        .replace(/\s*\(.*?\)\s*/g, '')   // remove parentheses and contents
-        .replace(/[^a-z0-9]+/g, '_')     // replace non-alphanumeric with "_"
-        .replace(/^_+|_+$/g, ''); 
-      console.log(`🟡 Category set to: ${currentSubCategory}`)
-      continue;
-    }
-
-    // const isRed = bg && (bg.red ?? 0) > 0.7 && (bg.green ?? 1) < 0.4 && (bg.blue ?? 1) < 0.4;
-
-    for (let j = 1; j < row.values.length; j++) {
-      const cell = row.values[j];
-      if (!cell || !cell.formattedValue) continue;
-
-      const label = monthYearLabels[j - 1];
-      if (!label) continue;
-
-      const cellBg = cell.effectiveFormat?.backgroundColor;
-
-      const isRedBg = cellBg &&
-        (cellBg.red ?? 0) > 0.6 &&
-        (cellBg.green ?? 0) < 0.4 &&
-        (cellBg.blue ?? 0) < 0.4;
-
-      const isNonWhite = cellBg && (
-        (cellBg.red ?? 1) !== 1 ||
-        (cellBg.green ?? 1) !== 1 ||
-        (cellBg.blue ?? 1) !== 1
-      );
-
-      // Skip all non-white, non-red backgrounds
-      if (isNonWhite && !isRedBg) continue;
-
-      const cleanLabel = label.replace('.', '');
-      const [abbrMonth, year] = cleanLabel.split(' ');
-      const fullMonth = monthMap[abbrMonth];
-      if (!fullMonth || !year) continue;
-
-      const amount = parseFloat(cell.formattedValue) || 0;
-      if (!amount) continue; // ✅ Skip null or 0 values
-
-      let activity_type = currentType;
-      let category = currentCategory;
-      let category_type = currentSubCategory;
-
-      let line_type = isRedBg ? 'subtotal' : 'data';
-
-      if (account_name === 'retained earnings' || account_name === 'profit for the year' || account_name === 'total liabilities and equity') {
-          activity_type = 'summary'
-          category = ''
-          category_type = ''
-          line_type = 'total'
-      }
-
-      if ( account_name === `total ${activity_type}`){
-        line_type = 'total'
-        category = ''
-        category_type = ''
-      }
-
-      if (activity_type === 'equity') {
-        category = ''
-        category_type = ''
-      }
-
-      if (category === 'non_current_liabilities') {
-        category_type = ''
-      }
-
-      // console.log(sub_category)
-
-      longFormat.push({
-        account_name,
-        month: fullMonth,
-        year,
-        amount,
-        activity_type, 
-        category,
-        category_type,
-        line_type
-      });
-    }
-  }
-
   try {
-    await pgClient.query(`DELETE FROM bs`);
-    await pgClient.query('BEGIN');
-    const insertSQL = `
-      INSERT INTO bs (account_name, month, year, amount, activity_type, category, category_type, line_type)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    `;
+    const res = await sheets.spreadsheets.get({
+      spreadsheetId,
+      ranges: ['BS!A1:M212'],
+      includeGridData: true,
+    });
 
-    for (const entry of longFormat) {
-      await pgClient.query(insertSQL, [
-        entry.account_name,
-        entry.month,
-        entry.year,
-        entry.amount,
-        entry.activity_type,
-        entry.category,
-        entry.category_type,
-        entry.line_type,
-      ]);
+    const grid = res.data.sheets?.[0]?.data?.[0]?.rowData;
+    if (!grid || grid.length < 2) {
+      throw new Error('Insufficient data: Grid must have at least 2 rows');
     }
 
-    await pgClient.query('COMMIT');
-    console.log('✅ Data inserted with type and activity.');
-  } catch (err) {
-    await pgClient.query('ROLLBACK');
-    console.error('❌ Insert failed:', err);
+    const monthMap = {
+      Jan: 'january', Feb: 'february', Mar: 'march',
+      Apr: 'april', May: 'may', Jun: 'june',
+      Jul: 'july', Aug: 'august', Sep: 'september',
+      Oct: 'october', Nov: 'november', Dec: 'december'
+    };
+
+    // Extract month-year labels from header row
+    const monthYearLabels = grid[0].values?.slice(1)
+      .map(cell => cell?.formattedValue)
+      .filter(Boolean) || [];
+
+    const longFormat = [];
+    let currentCategory = '';
+    let currentType = '';
+    let currentSubCategory = '';
+
+    // Helper function to normalize account names
+    const normalizeAccountName = (name) => {
+      return name
+        .toLowerCase()
+        .replace(/\s*\(.*?\)\s*/g, '')   // Remove parentheses and contents
+        .replace(/[^a-z0-9]+/g, '_')     // Replace non-alphanumeric with "_"
+        .replace(/^_+|_+$/g, '');        // Remove leading/trailing underscores
+    };
+
+    // Helper function to check background color
+    const checkBackgroundColor = (bg) => {
+      if (!bg) return 'white';
+      
+      const red = bg.red ?? 0;
+      const green = bg.green ?? 0;
+      const blue = bg.blue ?? 0;
+
+      if (green > 0.6 && red < 0.5 && blue < 0.5) return 'green';
+      if (blue > 0.6 && red < 0.4) return 'blue';
+      if (red > 0.8 && green > 0.7 && blue < 0.3) return 'yellow';
+      if (red > 0.6 && green < 0.4 && blue < 0.4) return 'red';
+      
+      // Check if it's truly white
+      if (red === 1 && green === 1 && blue === 1) return 'white';
+      
+      return 'other';
+    };
+
+    // Process each row
+    for (let i = 1; i < grid.length; i++) {
+      const row = grid[i];
+      if (!row?.values?.[0]?.formattedValue) continue;
+
+      const rawName = row.values[0].formattedValue.trim();
+      const account_name = rawName.toLowerCase();
+
+      // Skip total rows with numbers
+      if (/^total\s+\d+/i.test(account_name)) {
+        console.log("Skipped:", account_name);
+        continue;
+      }
+
+      const nameCell = row.values[0];
+      const bgColor = checkBackgroundColor(nameCell.effectiveFormat?.backgroundColor);
+
+      // Handle category headers based on background color
+      switch (bgColor) {
+        case 'green':
+          currentType = normalizeAccountName(account_name);
+          console.log(`🟢 Activity Type set to: ${currentType}`);
+          continue;
+        
+        case 'blue':
+          currentCategory = normalizeAccountName(account_name);
+          console.log(`🔵 Category set to: ${currentCategory}`);
+          continue;
+        
+        case 'yellow':
+          currentSubCategory = normalizeAccountName(account_name);
+          console.log(`🟡 Sub-category set to: ${currentSubCategory}`);
+          continue;
+      }
+
+      // Process data cells for this account
+      for (let j = 1; j < row.values.length && j <= monthYearLabels.length; j++) {
+        const cell = row.values[j];
+        if (!cell?.formattedValue) continue;
+
+        const label = monthYearLabels[j - 1];
+        if (!label) continue;
+
+        const cellBgColor = checkBackgroundColor(cell.effectiveFormat?.backgroundColor);
+        
+        // Skip non-white, non-red backgrounds
+        if (cellBgColor !== 'white' && cellBgColor !== 'red') continue;
+
+        // Parse month and year
+        const cleanLabel = label.replace('.', '');
+        const [abbrMonth, year] = cleanLabel.split(' ');
+        const fullMonth = monthMap[abbrMonth];
+        
+        if (!fullMonth || !year) {
+          console.warn(`Invalid date format: ${label}`);
+          continue;
+        }
+
+        const amount = parseFloat(cell.formattedValue.replace(/[,$]/g, '')) || 0;
+        if (amount === 0) continue; // Skip zero values
+
+        // Determine line type and category overrides
+        let activity_type = currentType;
+        let category = currentCategory;
+        let category_type = currentSubCategory;
+        let line_type = cellBgColor === 'red' ? 'subtotal' : 'data';
+
+        // Special handling for summary accounts
+        const summaryAccounts = ['retained earnings', 'profit for the year', 'total liabilities and equity'];
+        if (summaryAccounts.includes(account_name)) {
+          activity_type = 'summary';
+          category = '';
+          category_type = '';
+          line_type = 'total';
+        }
+
+        // Handle total rows
+        if (account_name === `total ${activity_type}`) {
+          line_type = 'total';
+          category = '';
+          category_type = '';
+        }
+
+        // Category-specific rules
+        if (activity_type === 'equity') {
+          category = '';
+          category_type = '';
+        }
+
+        if (category === 'non_current_liabilities') {
+          category_type = '';
+        }
+
+        longFormat.push({
+          account_name,
+          month: fullMonth,
+          year: parseInt(year),
+          amount,
+          activity_type,
+          category,
+          category_type,
+          line_type
+        });
+      }
+    }
+
+    // Database transaction
+    await pgClient.query('BEGIN');
+    
+    try {
+      // Clear existing data
+      await pgClient.query('DELETE FROM bs');
+      
+      // Prepare bulk insert
+      const insertSQL = `
+        INSERT INTO bs (account_name, month, year, amount, activity_type, category, category_type, line_type)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `;
+
+      // Batch insert for better performance
+      const batchSize = 100;
+      for (let i = 0; i < longFormat.length; i += batchSize) {
+        const batch = longFormat.slice(i, i + batchSize);
+        const promises = batch.map(entry => 
+          pgClient.query(insertSQL, [
+            entry.account_name,
+            entry.month,
+            entry.year,
+            entry.amount,
+            entry.activity_type,
+            entry.category,
+            entry.category_type,
+            entry.line_type,
+          ])
+        );
+        await Promise.all(promises);
+      }
+
+      await pgClient.query('COMMIT');
+      console.log(`✅ Successfully inserted ${longFormat.length} records`);
+      
+    } catch (insertErr) {
+      await pgClient.query('ROLLBACK');
+      throw insertErr;
+    }
+
+    return longFormat;
+
+  } catch (error) {
+    console.error('❌ Function failed:', error.message);
+    throw error;
   }
-  return longFormat;
 }
 
 
