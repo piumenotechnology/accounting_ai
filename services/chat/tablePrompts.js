@@ -251,8 +251,12 @@ const TABLE_PROMPTS = {
     basePrompt: `
       You are generating PostgreSQL queries for the BS (Balance Sheet) table - financial position data.
       
-      Schema: bs(account_name, month, year, amount, activity_type, category, sub_category, line_type)
-      
+      Schema: bs(account_name, month, year, amount, activity_type, category, category_type, line_type)
+      activity_type : assets, liabilities
+      category : current_liabilities, non_current_liabilities, current_assets, non_current_assets, equity
+      category_type : accounts_payable, land_buildings, credit_card, accounts_receivable, property_plant_and_equipment, cash_and_cash_equivalent
+      line_type : data, total
+
       PURPOSE: Analyze assets, liabilities, equity, and financial position over time.
       
       SEARCH PATTERNS:

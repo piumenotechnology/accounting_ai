@@ -513,7 +513,7 @@ async function insert_bs() {
   const monthYearLabels = grid[0].values.slice(1).map(cell => cell.formattedValue);
   const longFormat = [];
 
-  let currentCategory, currentType, currentSubCategory  = '';
+  let currentCategory, currentType, currentSubCategory, currentLineType  = '';
 
   for (let i = 1; i < grid.length; i++) {
     const row = grid[i];
@@ -529,12 +529,12 @@ async function insert_bs() {
     const bg = nameCell.effectiveFormat?.backgroundColor;
     const isGreen = bg && bg.green > 0.6 && (bg.red ?? 1) < 0.5 && (bg.blue ?? 1) < 0.5;
     if(isGreen) {
-      // currentCategory = account_name
-      //   .toLowerCase()
-      //   .replace(/\s*\(.*?\)\s*/g, '')   // remove parentheses and contents
-      //   .replace(/[^a-z0-9]+/g, '_')     // replace non-alphanumeric with "_"
-      //   .replace(/^_+|_+$/g, '');   
-      // console.log(`🟢 Category set to: ${currentCategory}`)
+      currentType = account_name
+        .toLowerCase()
+        .replace(/\s*\(.*?\)\s*/g, '')   // remove parentheses and contents
+        .replace(/[^a-z0-9]+/g, '_')     // replace non-alphanumeric with "_"
+        .replace(/^_+|_+$/g, '');   
+      console.log(`🟢 Category set to: ${currentType}`)
       continue;
     }
 
@@ -595,13 +595,11 @@ async function insert_bs() {
 
       let activity_type = currentType;
       let category = currentCategory;
-      let sub_category = currentSubCategory;
+      let category_type = currentSubCategory;
 
       let line_type = isRedBg ? 'total' : 'data';
-      
 
-      // Determine category and possibly override activity_type based on `name`
-      const lowerName = account_name.toLowerCase().trim();
+      // console.log(sub_category)
 
       longFormat.push({
         account_name,
@@ -610,17 +608,19 @@ async function insert_bs() {
         amount,
         activity_type, 
         category,
-        sub_category,
+        category_type,
         line_type
       });
     }
   }
 
+  
+
   try {
-    await pgClient.query(`DELETE FROM cash_flow`);
+    await pgClient.query(`DELETE FROM bs`);
     await pgClient.query('BEGIN');
     const insertSQL = `
-      INSERT INTO bs (account_name, month, year, amount, activity_type, category, sub_category, line_type)
+      INSERT INTO bs (account_name, month, year, amount, activity_type, category, category_type, line_type)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     `;
 
@@ -632,7 +632,7 @@ async function insert_bs() {
         entry.amount,
         entry.activity_type,
         entry.category,
-        entry.sub_category,
+        entry.category_type,
         entry.line_type,
       ]);
     }
