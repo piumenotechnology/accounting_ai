@@ -251,58 +251,147 @@ const TABLE_PROMPTS = {
     - category: 'current_assets', 'non_current_assets', 'current_liabilities', 'non_current_liabilities', 'equity'
     - category_type: e.g., 'cash_and_cash_equivalent', 'accounts_payable', 'accounts_receivable', 'credit_card', 'property_plant_and_equipment'
  */
+  // bs: {
+  //   basePrompt: `
+  //     You are generating PostgreSQL queries for the BS (Balance Sheet) table - financial position data.
+            
+  //     🧾 TABLE SCHEMA:
+  //     bs(account_name, month, year, amount, activity_type, line_type)
+
+  //     - activity_type: 'assets', 'liabilities', or 'equity'
+  //     - line_type: 'data', 'total'
+
+  //     🎯 PURPOSE: Generate SQL queries to analyze company assets, liabilities, equity, and financial ratios over time.
+
+  //     📌 RULES:
+  //     - **Never filter with line_type = 'total' unless the user specifically asks for a "total".** 
+  //         if user ask about Total Cash and Cash Equivalent, Uncategorized Asset, Total Current Assets, Total Land & Buildings, Total Property, plant and equipment , Total Non Current Assets, Total Assets, Total Credit Card, Total Current Liabilities, Total Non-current Liabilities, Total Liabilities, Retained Earnings, Profit for the year, Total Equity, Total Liabilities and Equity
+  //         example:
+  //         - user ask for Total Cash and Cash Equivalent = where account_name ilike '%Total Cash and Cash Equivalent%' and line_type = 'total'
+  //         - user ask for Uncategorized Asset = where account_name ilike '%Uncategorized Asset%' and line_type = 'total'
+  //         - user ask for Total Accounts Receivable = where account_name ilike '%Total Accounts Receivable%' and line_type = 'total'
+
+  //     - Default to using only line_type = 'data' unless explicitly told otherwise.
+      
+  //     📆 DATE PARSING RULES:
+  //     - Convert "January 2025" → month = 'january' AND year = '2025'
+  //     - Convert "Jan 25 2025" or "25 Jan 2025" → same as above (ignore day)
+  //     - Optional: allow filtering by multiple months/years
+
+  //     🔍 SEARCH RULES:
+  //     - Use ILIKE for fuzzy matching of account_name, e.g.:
+  //       - Cash-related: account_name ILIKE '%cash%' OR category_type = 'cash_and_cash_equivalent'
+  //       - Bank: account_name ILIKE '%bank%'
+  //       - Loans / Credit: account_name ILIKE '%loan%' OR account_name ILIKE '%credit%'
+  //       - Equity: account_name ILIKE '%equity%' OR category = 'equity'
+  //       - Payables: account_name ILIKE '%payable%' OR category_type = 'accounts_payable'
+
+  //     📈 FINANCIAL METRIC QUERIES:
+
+  //     💰 Total by Type:
+  //     - Total Assets → WHERE activity_type = 'assets' AND line_type = 'total'
+  //     - Total Liabilities → WHERE activity_type = 'liabilities' AND line_type = 'total'
+  //     - Total Equity → WHERE activity_type = 'equity' AND line_type = 'total'
+
+  //     📅 Trend / Comparison:
+  //     - Show values for same account across multiple months or years using GROUP BY year, month
+  //     - Compare last two years for a category → filter by category and use ORDER BY year DESC
+
+  //     💡 TIP: Always use lower() or ILIKE for case-insensitive search on account_name.
+  //   `,
+    
+  //   keywords: ['balance sheet', 'assets', 'liabilities', 'equity', 'cash', 'debt', 'capital']
+  // },
   bs: {
     basePrompt: `
       You are generating PostgreSQL queries for the BS (Balance Sheet) table - financial position data.
-            
-      🧾 TABLE SCHEMA:
+        
+    🧾 TABLE SCHEMA:
       bs(account_name, month, year, amount, activity_type, line_type)
 
       - activity_type: 'assets', 'liabilities', or 'equity'
-      - line_type: 'data', 'total'
+      - line_type: 'data', 'subtotal', 'total'
 
       🎯 PURPOSE: Generate SQL queries to analyze company assets, liabilities, equity, and financial ratios over time.
 
       📌 RULES:
-      - **Never filter with line_type = 'total' unless the user specifically asks for a "total".** 
-          if user ask about Total Cash and Cash Equivalent, Uncategorized Asset, Total Current Assets, Total Land & Buildings, Total Property, plant and equipment , Total Non Current Assets, Total Assets, Total Credit Card, Total Current Liabilities, Total Non-current Liabilities, Total Liabilities, Retained Earnings, Profit for the year, Total Equity, Total Liabilities and Equity
-          example:
-          - user ask for Total Cash and Cash Equivalent = where account_name ilike '%Total Cash and Cash Equivalent%' and line_type = 'total'
-          - user ask for Uncategorized Asset = where account_name ilike '%Uncategorized Asset%' and line_type = 'total'
-          - user ask for Total Accounts Receivable = where account_name ilike '%Total Accounts Receivable%' and line_type = 'total'
+      - **Default to line_type = 'data' for individual account details**
+      - **Use line_type = 'subtotal' for intermediate totals and category summaries**
+      - **Use line_type = 'total' for main balance sheet totals only**
 
-      - Default to using only line_type = 'data' unless explicitly told otherwise.
-      
+      🔍 SUBTOTAL ACCOUNTS (line_type = 'subtotal'):
+      When user asks for these accounts, use line_type = 'subtotal':
+      - "Total Credit Card" → account_name ILIKE '%Total Credit Card%' AND line_type = 'subtotal'
+      - "Total Non Current Assets" → account_name ILIKE '%Total Non Current Assets%' AND line_type = 'subtotal'
+      - "Uncategorized Asset" → account_name ILIKE '%Uncategorized Asset%' AND line_type = 'subtotal'
+      - "Total Current Liabilities" → account_name ILIKE '%Total Current Liabilities%' AND line_type = 'subtotal'
+      - "Total Accounts Receivable (A/R)" → account_name ILIKE '%Total Accounts Receivable%' AND line_type = 'subtotal'
+      - "Total Accounts Payable (A/P)" → account_name ILIKE '%Total Accounts Payable%' AND line_type = 'subtotal'
+      - "Total Current Assets" → account_name ILIKE '%Total Current Assets%' AND line_type = 'subtotal'
+      - "Total Non-current Liabilities" → account_name ILIKE '%Total Non-current Liabilities%' AND line_type = 'subtotal'
+      - "Total Land & Buildings" → account_name ILIKE '%Total Land%Buildings%' AND line_type = 'subtotal'
+      - "Total Property, Plant and Equipment" → account_name ILIKE '%Total Property%Plant%Equipment%' AND line_type = 'subtotal'
+      - "Total Cash and Cash Equivalent" → account_name ILIKE '%Total Cash and Cash Equivalent%' AND line_type = 'subtotal'
+
+      🏆 TOTAL ACCOUNTS (line_type = 'total'):
+      When user asks for these main totals, use line_type = 'total':
+      - "Total Assets" → account_name ILIKE '%Total Assets%' AND line_type = 'total'
+      - "Retained Earnings" → account_name ILIKE '%Retained Earnings%' AND line_type = 'total'
+      - "Total Liabilities" → account_name ILIKE '%Total Liabilities%' AND line_type = 'total'
+      - "Total Equity" → account_name ILIKE '%Total Equity%' AND line_type = 'total'
+      - "Profit for the Year" → account_name ILIKE '%Profit for the Year%' AND line_type = 'total'
+      - "Total Liabilities and Equity" → account_name ILIKE '%Total Liabilities and Equity%' AND line_type = 'total'
+
       📆 DATE PARSING RULES:
-      - Convert "January 2025" → month = 'january' AND year = '2025'
-      - Convert "Jan 25 2025" or "25 Jan 2025" → same as above (ignore day)
-      - Optional: allow filtering by multiple months/years
+      - "January 2025" → WHERE month = 'january' AND year = '2025'
+      - "Jan 2025" → WHERE month = 'january' AND year = '2025'
+      - "2025-01" → WHERE month = 'january' AND year = '2025'
+      - Multiple periods: use IN clauses or date ranges
+      - Always convert month names to lowercase
 
-      🔍 SEARCH RULES:
-      - Use ILIKE for fuzzy matching of account_name, e.g.:
-        - Cash-related: account_name ILIKE '%cash%' OR category_type = 'cash_and_cash_equivalent'
-        - Bank: account_name ILIKE '%bank%'
-        - Loans / Credit: account_name ILIKE '%loan%' OR account_name ILIKE '%credit%'
-        - Equity: account_name ILIKE '%equity%' OR category = 'equity'
-        - Payables: account_name ILIKE '%payable%' OR category_type = 'accounts_payable'
+      🔍 SEARCH PATTERNS:
+      Use ILIKE with wildcards for flexible matching:
+      - Cash accounts: account_name ILIKE '%cash%'
+      - Bank accounts: account_name ILIKE '%bank%'
+      - Receivables: account_name ILIKE '%receivable%'
+      - Payables: account_name ILIKE '%payable%'
+      - Inventory: account_name ILIKE '%inventory%'
+      - Equipment: account_name ILIKE '%equipment%' OR account_name ILIKE '%plant%'
+      - Loans: account_name ILIKE '%loan%' OR account_name ILIKE '%credit%'
 
-      📈 FINANCIAL METRIC QUERIES:
+      📊 COMMON QUERY PATTERNS:
 
-      💰 Total by Type:
-      - Total Assets → WHERE activity_type = 'assets' AND line_type = 'total'
-      - Total Liabilities → WHERE activity_type = 'liabilities' AND line_type = 'total'
-      - Total Equity → WHERE activity_type = 'equity' AND line_type = 'total'
+      💰 Activity Type Queries:
+      - Individual Assets: WHERE activity_type = 'assets' AND line_type = 'data'
+      - Asset Categories: WHERE activity_type = 'assets' AND line_type = 'subtotal'
+      - Main Asset Total: WHERE activity_type = 'assets' AND line_type = 'total'
+      - Individual Liabilities: WHERE activity_type = 'liabilities' AND line_type = 'data'  
+      - Liability Categories: WHERE activity_type = 'liabilities' AND line_type = 'subtotal'
+      - Main Liability Total: WHERE activity_type = 'liabilities' AND line_type = 'total'
+      - Individual Equity: WHERE activity_type = 'equity' AND line_type = 'data'
+      - Main Equity Total: WHERE activity_type = 'equity' AND line_type = 'total'
 
-      📅 Trend / Comparison:
-      - Show values for same account across multiple months or years using GROUP BY year, month
-      - Compare last two years for a category → filter by category and use ORDER BY year DESC
+      📈 Trend Analysis:
+      - Monthly trends: GROUP BY year, month ORDER BY year, month
+      - Year-over-year: Compare same month across years
+      - Latest period: ORDER BY year DESC, month DESC LIMIT 1
 
-      💡 TIP: Always use lower() or ILIKE for case-insensitive search on account_name.
-    `,
-    
-    keywords: ['balance sheet', 'assets', 'liabilities', 'equity', 'cash', 'debt', 'capital']
+      🧮 Financial Ratios (when requested):
+      - Current Ratio: Current Assets / Current Liabilities
+      - Debt-to-Equity: Total Liabilities / Total Equity
+      - Asset composition: Individual assets / Total Assets
+
+      ⚠️ IMPORTANT NOTES:
+      - Always use ILIKE for case-insensitive searches
+      - Sum amounts when aggregating multiple accounts
+      - Handle NULL values with COALESCE(amount, 0)
+      - Use proper date ordering: year DESC, then month DESC for latest first
+      - When user asks for "breakdown" or "details", use line_type = 'data'
+      - When user asks for "category totals" or "subtotals", use line_type = 'subtotal'
+      - When user asks for "main totals" or "balance sheet totals", use line_type = 'total'
+      `,
+    keywords: ['balance sheet', 'assets', 'liabilities', 'equity', 'cash', 'debt', 'capital', 'financial position', 'current assets', 'non-current assets', 'current liabilities', 'retained earnings']
   },
-
   cash_flow: {
     basePrompt: `
       You are generating PostgreSQL queries for the CASH_FLOW table - cash movement analysis.
