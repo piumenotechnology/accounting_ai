@@ -259,10 +259,11 @@ async function insertMappedData(mappedData) {
 //   return longFormat;
 // }
 
+/*data pl*/
 async function insert_pl() {
   const res = await sheets.spreadsheets.get({
     spreadsheetId,
-    ranges: ['PL!A1:FB100'], // Adjust range as needed
+    ranges: ['PL!A1:FB90'], // Adjust range as needed
     includeGridData: true,
   });
 
@@ -289,28 +290,34 @@ async function insert_pl() {
 
     // If this is a blue "Total" row, set the current type
     if (isBlue && label.toLowerCase().startsWith('total ')) {
-      currentType = label.replace(/^total\s+/i, '').replace(/\d+/g, '') .trim().toLowerCase();
+      currentType = label.replace(/^total\s+/i, '').replace(/\d+/g, '').trim().replace(/\s+/g, '_').toLowerCase();
       continue;
     }
 
-    rowTypes[i] = currentType; // assign the current type to this row (if any)
+    rowTypes[i] = currentType;
   }
 
   // Pass 2: extract values (top-down)
   for (let i = 1; i < grid.length; i++) {
     const row = grid[i];
-    const type = rowTypes[i];
-    if (!type) continue; // skip if no type assigned
+    let category = rowTypes[i];
 
     const cell = row.values[0];
     const label = cell.formattedValue.trim();
+
     const parts = label.split(' ');
     const codeCandidate = parts[0];
-    const isCode = /^\d{5}$/.test(codeCandidate);
-    if (!isCode) continue;
+    const isCode = /^\d{4,}$/.test(codeCandidate);
+    // if (!isCode) continue;
+    // const code = codeCandidate;
+    // const name = parts.slice(1).join(' ').toLowerCase().trim();
+    const name = parts.join(' ').toLowerCase().trim();
 
-    const code = codeCandidate;
-    const name = parts.slice(1).join(' ').toLowerCase().trim();
+    if(!category && name.includes('total')){
+      category = name.replace(/^total\s+/i, '').replace(/\d+/g, '').trim().replace(/\s+/g, '_').toLowerCase();;
+    }else if (!category) {
+      category = name.replace(/\s+/g, '_');
+    }
 
     for (let j = 1; j < row.values.length; j++) {
       const cell = row.values[j];
@@ -323,23 +330,29 @@ async function insert_pl() {
       const amount = parseFloat(cell.formattedValue) || 0;
       if (!amount) continue;
 
-      longFormat.push({ date, code, name, type, amount });
+      let line_type = isCode ? 'data' : 'total' ;
+
+      if (name === 'gross profit'){
+        category = name.replace(/\s+/g, '_');
+      }
+
+      longFormat.push({ name, category, line_type, amount,  date });
     }
   }
 
   try {
-    await pgClient.query('DELETE FROM pl');
     await pgClient.query('BEGIN');
+    await pgClient.query('DELETE FROM pl');
 
-    const insertSQL = 'INSERT INTO pl (date, code, name, type, amount) VALUES ($1, $2, $3, $4, $5)';
+    const insertSQL = 'INSERT INTO pl (name, category, line_type, amount, date) VALUES ($1, $2, $3, $4, $5)';
 
     for (const entry of longFormat) {
       await pgClient.query(insertSQL, [
-        entry.date,
-        entry.code,
         entry.name,
-        entry.type,
+        entry.category,
+        entry.line_type,
         entry.amount,
+        entry.date,
       ]);
     }
 
@@ -352,6 +365,7 @@ async function insert_pl() {
 
   return longFormat;
 }
+
 
 
 async function insert_cash_flow() {
@@ -494,162 +508,6 @@ async function insert_cash_flow() {
   }
   return longFormat;
 }
-//   const res = await sheets.spreadsheets.get({
-//     spreadsheetId,
-//     ranges: ['BS!A1:M212'],
-//     includeGridData: true,
-//   });
-
-//   const grid = res.data.sheets[0].data[0].rowData;
-//   if (!grid || grid.length < 2) throw new Error('Not enough data');
-
-//   const monthMap = {
-//     Jan: 'january', Feb: 'february', Mar: 'march',
-//     Apr: 'april', May: 'may', Jun: 'june',
-//     Jul: 'july', Aug: 'august', Sep: 'september',
-//     Oct: 'october', Nov: 'november', Dec: 'december'
-//   };
-
-//   const monthYearLabels = grid[0].values.slice(1).map(cell => cell.formattedValue);
-//   const longFormat = [];
-
-//   let currentCategory, currentType, currentSubCategory  = '';
-
-//   for (let i = 1; i < grid.length; i++) {
-//     const row = grid[i];
-//     if (!row || !row.values) continue;
-
-//     const nameCell = row.values[0];
-//     if (!nameCell || !nameCell.formattedValue) continue;
-
-//     const rawName = nameCell.formattedValue.trim();
-//     const account_name = rawName.toLowerCase();
-
-//     if (/^total\s+\d+/i.test(account_name)) {
-//       console.log("Skipped", account_name);
-//       continue;
-//     } 
-
-//     // Check if name cell has a blue background
-//     const bg = nameCell.effectiveFormat?.backgroundColor;
-//     const isGreen = bg && bg.green > 0.6 && (bg.red ?? 1) < 0.5 && (bg.blue ?? 1) < 0.5;
-//     if(isGreen) {
-//       currentType = account_name
-//         .toLowerCase()
-//         .replace(/\s*\(.*?\)\s*/g, '')   // remove parentheses and contents
-//         .replace(/[^a-z0-9]+/g, '_')     // replace non-alphanumeric with "_"
-//         .replace(/^_+|_+$/g, '');   
-//       console.log(`🟢 Category set to: ${currentType}`)
-//       continue;
-//     }
-
-//     const isBlue = bg && bg.blue > 0.6 && (bg.red ?? 1) < 0.4;
-//     if (isBlue) {
-//       currentCategory = account_name
-//         .toLowerCase()
-//         .replace(/\s*\(.*?\)\s*/g, '')   // remove parentheses and contents
-//         .replace(/[^a-z0-9]+/g, '_')     // replace non-alphanumeric with "_"
-//         .replace(/^_+|_+$/g, ''); 
-//       console.log(`🔵 Category set to: ${currentCategory}`);
-//       continue;
-//     }
-
-//     const isYellow = bg && (bg.red ?? 0) > 0.8 && (bg.green ?? 0) > 0.7 && (bg.blue ?? 1) < 0.3;
-//     if(isYellow) {
-//       currentSubCategory = account_name
-//         .toLowerCase()
-//         .replace(/\s*\(.*?\)\s*/g, '')   // remove parentheses and contents
-//         .replace(/[^a-z0-9]+/g, '_')     // replace non-alphanumeric with "_"
-//         .replace(/^_+|_+$/g, ''); 
-//       console.log(`🟡 Category set to: ${currentSubCategory}`)
-//       continue;
-//     }
-
-//     // const isRed = bg && (bg.red ?? 0) > 0.7 && (bg.green ?? 1) < 0.4 && (bg.blue ?? 1) < 0.4;
-
-//     for (let j = 1; j < row.values.length; j++) {
-//       const cell = row.values[j];
-//       if (!cell || !cell.formattedValue) continue;
-
-//       const label = monthYearLabels[j - 1];
-//       if (!label) continue;
-
-//       const cellBg = cell.effectiveFormat?.backgroundColor;
-
-//       const isRedBg = cellBg &&
-//         (cellBg.red ?? 0) > 0.6 &&
-//         (cellBg.green ?? 0) < 0.4 &&
-//         (cellBg.blue ?? 0) < 0.4;
-
-//       const isNonWhite = cellBg && (
-//         (cellBg.red ?? 1) !== 1 ||
-//         (cellBg.green ?? 1) !== 1 ||
-//         (cellBg.blue ?? 1) !== 1
-//       );
-
-//       // Skip all non-white, non-red backgrounds
-//       if (isNonWhite && !isRedBg) continue;
-
-//       const cleanLabel = label.replace('.', '');
-//       const [abbrMonth, year] = cleanLabel.split(' ');
-//       const fullMonth = monthMap[abbrMonth];
-//       if (!fullMonth || !year) continue;
-
-//       const amount = parseFloat(cell.formattedValue) || 0;
-//       if (!amount) continue; // ✅ Skip null or 0 values
-
-//       let activity_type = currentType;
-//       let category = currentCategory;
-//       let category_type = currentSubCategory;
-
-//       let line_type = isRedBg ? 'total' : 'data';
-
-//       // console.log(sub_category)
-
-//       longFormat.push({
-//         account_name,
-//         month: fullMonth,
-//         year,
-//         amount,
-//         activity_type, 
-//         category,
-//         category_type,
-//         line_type
-//       });
-//     }
-//   }
-
-  
-
-//   try {
-//     await pgClient.query(`DELETE FROM bs`);
-//     await pgClient.query('BEGIN');
-//     const insertSQL = `
-//       INSERT INTO bs (account_name, month, year, amount, activity_type, category, category_type, line_type)
-//       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-//     `;
-
-//     for (const entry of longFormat) {
-//       await pgClient.query(insertSQL, [
-//         entry.account_name,
-//         entry.month,
-//         entry.year,
-//         entry.amount,
-//         entry.activity_type,
-//         entry.category,
-//         entry.category_type,
-//         entry.line_type,
-//       ]);
-//     }
-
-//     await pgClient.query('COMMIT');
-//     console.log('✅ Data inserted with type and activity.');
-//   } catch (err) {
-//     await pgClient.query('ROLLBACK');
-//     console.error('❌ Insert failed:', err);
-//   }
-//   return longFormat;
-// } 
 
 async function insert_bs() {
   try {
