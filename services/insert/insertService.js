@@ -290,7 +290,13 @@ async function insert_pl() {
 
     // If this is a blue "Total" row, set the current type
     if (isBlue && label.toLowerCase().startsWith('total ')) {
-      currentType = label.replace(/^total\s+/i, '').replace(/\d+/g, '').trim().replace(/\s+/g, '_').toLowerCase();
+      currentType = label
+        .replace(/^total\s+/i, '')      // Remove starting "total"
+        .replace(/\d+/g, '')            // Remove numbers
+        .replace(/[^\w\s]/g, '')        // Remove dashes, punctuation, etc.
+        .trim()
+        .replace(/\s+/g, '_')           // Replace spaces with _
+        .toLowerCase();
       continue;
     }
 
@@ -314,7 +320,13 @@ async function insert_pl() {
     const name = parts.join(' ').toLowerCase().trim();
 
     if(!category && name.includes('total')){
-      category = name.replace(/^total\s+/i, '').replace(/\d+/g, '').trim().replace(/\s+/g, '_').toLowerCase();;
+      category = name
+        .replace(/^total\s+/i, '')      // Remove starting "total"
+        .replace(/\d+/g, '')            // Remove numbers
+        .replace(/[^\w\s]/g, '')        // Remove dashes, punctuation, etc.
+        .trim()
+        .replace(/\s+/g, '_')           // Replace spaces with _
+        .toLowerCase();
     }else if (!category) {
       category = name.replace(/\s+/g, '_');
     }
