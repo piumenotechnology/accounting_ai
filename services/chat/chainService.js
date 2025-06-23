@@ -146,6 +146,8 @@ async function loadChain(session_id) {
 
       // STEP 2: Generate SQL using table-specific prompt
       const recentContext = pastMessages.slice(-4);
+
+      console.log("🔍 Recent context:", recentContext.map(m => m.content).join("\n"));
       
       // Get the table-specific prompt
       const tablePrompt = getTablePrompt(selectedTable, input, sessionMetadata);
