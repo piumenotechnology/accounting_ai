@@ -13,6 +13,8 @@ const TABLE_PROMPTS = {
       - Sales rep names → hubspot_owner_name ILIKE '%search%'
       - Conference codes → conference_internal_name ILIKE '%search%'
       - Deal types → dealtype ILIKE '%search%'
+
+      dealtype: sponsor, delegate
       
       COMMON QUERIES:
       - Revenue totals: SELECT SUM(amount) as total_revenue
@@ -25,7 +27,7 @@ const TABLE_PROMPTS = {
       EXAMPLES:
       - "Acme Corp revenue" → WHERE company_name ILIKE '%acme%'
       - "John's closed deals" → WHERE hubspot_owner_name ILIKE '%john%'
-      - "Sponsorship deals" → WHERE dealtype ILIKE '%sponsorship%'
+      - "Sponsorship deals" → WHERE dealtype ILIKE '%sponsor%'
       - "Conference ABC123 revenue" → WHERE conference_internal_name ILIKE '%abc123%'
     `,
     
@@ -563,6 +565,7 @@ const TABLE_PROMPTS = {
       - net cash from investing : WHERE activity_type = 'investing' and category = 'total'
       - net income = where category = 'net_income'
       - Net cash increase for period = where category = 'summary'
+      - how much net cash flow on jan 2025? = WHERE month = 'january' and year = '2025' and category = 'summary'
 
       - Cash inflows: WHERE amount > 0 and category <> 'total'
       - Cash outflows: WHERE amount < 0 and and category <> 'total'
