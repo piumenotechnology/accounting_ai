@@ -545,7 +545,13 @@ const TABLE_PROMPTS = {
       
       Schema: cash_flow(month, year, name, amount, category, activity_type)
       activity_type: 'operating', 'investing', 'financing', 'net_income'
-      category: 'net_income', 'net_cash', 'subtotal', 'total', 'sumary'
+      category: 'net_income', 'data', 'subtotal', 'total', 'sumary'
+
+      use 'summary' for overall cash flow totals or Net cash increase for period
+      use 'total' for category ask about net cash provided by financing activities, net cash provided by investing activities, net cash provided by operating activities
+      use 'data' for individual cash flow entries
+      use 'subtotal' for ' reconcile net income to net cash flow from operations'
+
       PURPOSE: Track cash inflows, outflows, and liquidity management.
       
       SEARCH PATTERNS:
@@ -557,6 +563,20 @@ const TABLE_PROMPTS = {
       - "January 25 2025" → month = 'january' and year = '2025'
       - "January 2025" → month = 'january' and year = '2025'
 
+      make sure for each value, show their own value
+        select 
+          month, 
+          sum(amount) as net_cash_flow
+        from cash_flow
+        where 
+          month in ('june', 'march') 
+          and year = '2025' 
+          and category = 'summary'
+        group by month, year
+        order by month desc
+        limit 100;
+
+
       CASH FLOW ANALYSIS:
       - Investing activities: WHERE activity_type = 'investing' and category = 'total'
       - Financing activities: WHERE activity_type = 'financing' and category = 'total'
@@ -566,6 +586,11 @@ const TABLE_PROMPTS = {
       - net income = where category = 'net_income'
       - Net cash increase for period = where category = 'summary'
       - how much net cash flow on jan 2025? = WHERE month = 'january' and year = '2025' and category = 'summary'
+      - cash flow for payroll = WHERE name ILIKE '%payroll%' and category = 'data'
+      
+      use singluar name for each value
+      - net cash flow from receivables = WHERE name ILIKE '%receivable%' and category = 'data'
+      - net cash flow from payables = WHERE name ILIKE '%payable%' and category = 'data'
 
       - Cash inflows: WHERE amount > 0 and category <> 'total'
       - Cash outflows: WHERE amount < 0 and and category <> 'total'

@@ -407,7 +407,7 @@ const {
   getChatHistory,
   getSessionMetadata,
   setSessionMetadata,
-} = require("./memoryService");
+} = require("./memoryServiceRedis");
 
 // Import the new table-specific prompts
 const { TABLE_PROMPTS, getTablePrompt, selectBestTable } = require('./tablePrompts');
@@ -692,7 +692,6 @@ async function loadChain(session_id) {
 
       // STEP 3: Generate SQL using contextual prompt
       const recentContext = pastMessages.slice(-4);
-      console.log("🔍 Recent context:", recentContext.map(m => m.content).join("\n"));
       
       // Get contextually-aware table prompt
       const tablePrompt = buildContextualPrompt(
@@ -702,6 +701,8 @@ async function loadChain(session_id) {
         sessionMetadata, 
         selectedTable
       );
+
+      console.log(tablePrompt)
       
       const sqlPrompt = [
         {
