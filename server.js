@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors')
 require('dotenv').config();
-const { connectRedis } = require('./services/redisClient');
+// const { connectRedis } = require('./services/redisClient');
 
 // Import Routes
 const chatRoutes = require('./routes/chatRoutes');
@@ -11,7 +11,6 @@ const authRoutes = require('./routes/authRoutes');
 
 app.use(cors());
 
-connectRedis(); // 🔌 Connect to Redis
 
 // Middleware
 app.use(express.json());

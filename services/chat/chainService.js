@@ -1,415 +1,17 @@
-// const { openai } = require("../openaiService");
-// const { runSQL } = require("../databaseService");
-// const fs = require('fs');
-// const {
-//   getChatHistory,
-//   getSessionMetadata,
-//   setSessionMetadata,
-// } = require("./memoryService");
-
-// // Import the new table-specific prompts
-// const { TABLE_PROMPTS, getTablePrompt, selectBestTable } = require('./tablePrompts');
-
-// function writeToLogFile(logMessage) {
-//   const timestamp = new Date().toISOString();
-//   const logEntry = `${timestamp} - ${logMessage}\n`;
-
-//   fs.appendFile('app.log', logEntry, (err) => {
-//     if (err) {
-//       console.error('Error writing to log file:', err);
-//     }
-//   });
-// };
-
-// const tableDescriptions = {
-//   closed_deal: "Tracks closed sales deals such as sponsorships and delegate registrations.",
-//   lead: "Tracks active sales opportunities and pipeline deals that are not yet closed, including deal stages, sources, and sales activities.",
-//   invoice: "Contains invoices issued to customers, with details like invoice number, date, customer name, and billed amount.",
-//   payment: "Captures outgoing payments to vendors, including invoice references, vendor names, payment details, and dates.",
-//   ap: "Tracks accounts payable, including amounts owed to suppliers, due dates, and foreign balances.",
-//   ar: "Tracks accounts receivable, including outstanding customer balances, due dates, and currencies.",
-//   pl: "Contains profit and loss data for financial analysis, including income, expenses, and net profit by date.",
-//   bs: "Contains balance sheet data, including assets, liabilities, and equity positions by reporting period.",
-//   cash_flow: "Tracks cash inflows and outflows by category and date, used for liquidity and cash management analysis.",
-// };
-
-// function cleanSQL(text) {
-//   return text
-//     .toLowerCase()
-//     .trim()
-//     .replace(/```sql|```/gi, "")
-//     .trim();
-// }
-
-// //SQL validation and optimization
-// function validateAndOptimizeSQL(sql, tableName) {
-//   const issues = [];
-//   const suggestions = [];
-
-//   if (
-//     !sql.includes("limit") &&
-//     !sql.includes("count") &&
-//     !sql.includes("sum")
-//   ) {
-//     suggestions.push("Consider adding LIMIT for large datasets");
-//   }
-
-//   if (sql.includes("select *")) {
-//     suggestions.push(
-//       "Consider selecting specific columns for better performance"
-//     );
-//   }
-
-//   if (sql.includes("date") && !sql.includes("::date") && !sql.includes("'")) {
-//     issues.push("Date values should be quoted");
-//   }
-
-//   return { issues, suggestions, isValid: issues.length === 0 };
-// }
-
-// //Result analysis and insights  
-// function analyzeResults(results, question, tableName) {
-//   if (!Array.isArray(results) || results.length === 0) {
-//     return { isEmpty: true, insights: [] };
-//   }
-
-//   const insights = [];
-//   const firstRow = results[0];
-
-//   const numericColumns = Object.keys(firstRow).filter(
-//     (key) => typeof firstRow[key] === "number"
-//   );
-
-//   const dateColumns = Object.keys(firstRow).filter(
-//     (key) => key.includes("date") || key.includes("time")
-//   );
-
-//   // Find best columns for charting
-//   let bestNumericColumn = null;
-//   let bestDateColumn = null;
-  
-//   if (numericColumns.length > 0) {
-//     // Prefer amount columns for charts
-//     bestNumericColumn = numericColumns.find(col => 
-//       col.includes('amount') || col.includes('balance') || col.includes('total')
-//     ) || numericColumns[0];
-    
-//     const totals = numericColumns.map((col) => ({
-//       column: col,
-//       total: results.reduce((sum, row) => sum + (row[col] || 0), 0),
-//       avg: results.reduce((sum, row) => sum + (row[col] || 0), 0) / results.length,
-//     }));
-//     insights.push({ type: "totals", data: totals });
-//   }
-
-//   if (dateColumns.length > 0) {
-//     // Prefer standard date columns
-//     bestDateColumn = dateColumns.find(col => 
-//       col === 'date' || col.includes('date') && !col.includes('create')
-//     ) || dateColumns[0];
-//   }
-
-//   if (results.length > 1 && dateColumns.length > 0) {
-//     insights.push({ type: "time_range", count: results.length });
-//   }
-
-//   return {
-//     isEmpty: false,
-//     recordCount: results.length,
-//     insights,
-//     hasNumericData: numericColumns.length > 0,
-//     hasDateData: dateColumns.length > 0,
-//     bestNumericColumn,
-//     bestDateColumn
-//   };
-// }
-
-// //Main chain with table-specific prompts
-// async function loadChain(session_id) {
-//   const chatHistory = getChatHistory(session_id);
-
-//   return async ({ input, table = null, retryCount = 0 }) => {
-//     try {
-//       const pastMessages = await chatHistory.getMessages();
-//       const sessionMetadata = (await getSessionMetadata(session_id)) || {};
-
-//       // STEP 1: Enhanced table selection using new system
-//       let selectedTable = table?.toLowerCase();
-//       if (!selectedTable) {
-//         selectedTable = await selectBestTable(
-//           input,
-//           pastMessages,
-//           sessionMetadata
-//         );
-//         console.log("🎯 Selected table:", selectedTable);
-//       }
-
-//       // STEP 2: Generate SQL using table-specific prompt
-//       const recentContext = pastMessages.slice(-4);
-
-//       console.log("🔍 Recent context:", recentContext.map(m => m.content).join("\n"));
-      
-//       // Get the table-specific prompt
-//       const tablePrompt = getTablePrompt(selectedTable, input, sessionMetadata);
-      
-//       const sqlPrompt = [
-//         {
-//           role: "system",
-//           content: tablePrompt
-//         },
-//         ...recentContext.map((m) => ({
-//           role: m._getType?.() || m.role,
-//           content: m.content,
-//         })),
-//         { role: "user", content: input },
-//       ];
-
-//       const sqlResponse = await openai.invoke(sqlPrompt);
-//       const sql = cleanSQL(sqlResponse.content);
-
-//       // STEP 3: Validate SQL
-//       const validation = validateAndOptimizeSQL(sql, selectedTable);
-//       if (!validation.isValid && retryCount === 0) {
-//         console.warn("⚠️ SQL validation issues:", validation.issues);
-//       }
-
-//       console.log("🔍 Session ID:", session_id);
-//       console.log("🔍 Selected table:", selectedTable);
-//       console.log("🔍 Input question:", input);
-//       console.log("⚡ Generated SQL:", sql);
-
-//       if (!sql.startsWith("select")) {
-//         return "⚠️ Only SELECT queries are supported.";
-//       }
-
-//       // STEP 4: Execute with timeout
-//       let result;
-//       let sqlError = null;
-//       const startTime = Date.now();
-
-//       try {
-//         result = await Promise.race([
-//           runSQL(sql),
-//           new Promise((_, reject) =>
-//             setTimeout(() => reject(new Error("Query timeout")), 30000)
-//           ),
-//         ]);
-//       } catch (err) {
-//         sqlError = err.message;
-//         console.error("❌ SQL Error:", sqlError);
-//       }
-
-//       // STEP 5: Analyze results
-//       const analysis = analyzeResults(result, input, selectedTable);
-
-//       if (analysis.isEmpty && !sqlError) {
-//         // Smart fallback with table-aware suggestions
-//         const tableConfig = TABLE_PROMPTS[selectedTable];
-//         const alternativePrompt = [
-//           {
-//             role: "system",
-//             content: `
-//               No data found in ${selectedTable} table. 
-              
-//               Table purpose: ${tableDescriptions[selectedTable]}
-//               Common keywords: ${tableConfig?.keywords.join(', ')}
-              
-//               Available alternative tables:
-//               ${Object.entries(tableDescriptions)
-//                 .filter(([key]) => key !== selectedTable)
-//                 .map(([key, desc]) => `- ${key}: ${desc}`)
-//                 .join("\n")}
-              
-//               Suggest specific alternatives based on the question context.
-//             `.trim(),
-//           },
-//           {
-//             role: "user",
-//             content: `Question: "${input}" returned no results from ${selectedTable}`,
-//           },
-//         ];
-
-//         const altResponse = await openai.invoke(alternativePrompt);
-//         const message = `I couldn't find any data for that question in the ${selectedTable} table.\n\n${altResponse.content}`;
-
-//         await chatHistory.addUserMessage(input);
-//         await chatHistory.addAIMessage(message);
-//         await setSessionMetadata(session_id, {
-//           last_table: selectedTable,
-//           last_query_empty: true,
-//           suggestion_made: true,
-//         });
-
-//         return message;
-//       }
-
-//       // STEP 6: Generate enhanced summary with table-specific context
-//       const tableConfig = TABLE_PROMPTS[selectedTable];
-//       const summaryPrompt = [
-//         {
-//           role: "system",
-//           content: `
-//             You are a business data analyst specializing in ${selectedTable} data.
-            
-//             Context:
-//             - Table: ${selectedTable} (${tableDescriptions[selectedTable]})
-//             - Question: "${input}"
-//             - Records found: ${analysis.recordCount || 0}
-//             - Has numeric data: ${analysis.hasNumericData}
-//             - Table focus: ${tableConfig?.keywords.join(', ')}
-            
-//             RESPONSE STYLE:
-//             Write like you're having a conversation with a business colleague. Use natural language, not markdown formatting.
-            
-//             STRUCTURE FOR READABILITY:
-            
-//             1. **Lead with Direct Answer**: 
-//               Start with a clear, conversational answer to their question.
-//               Example: "Venterra generated $1,295 in total revenue from one deal."
-            
-//             2. **Keep It Conversational**:
-//               - Write in complete sentences, not bullet points or headers
-//               - Use natural transitions like "Additionally," "What's interesting is," "Here's what stands out"
-//               - Avoid technical markdown symbols (##, **, --)
-            
-//             3. **Make Numbers Clear**:
-//               - Embed numbers naturally: "The total came to $1,295"
-//               - Round appropriately: "$1.2 million" not "$1,234,567"
-//               - Add context: "$50K, which is 25% above average"
-            
-//             4. **Organize Long Responses Naturally**:
-//               Instead of headers, use transitional phrases:
-//               - "Here's what I found..."
-//               - "Looking at the details..."
-//               - "What stands out is..."
-//               - "The key takeaway is..."
-            
-//             5. **Business Language**:
-//               - Say "customers" not "records"
-//               - Say "deals" not "rows"  
-//               - Say "revenue totaled" not "sum of amount column equals"
-//               - Use active voice: "John closed 5 deals" not "5 deals were closed by John"
-            
-//             6. **Keep Paragraphs Short**:
-//               - 2-3 sentences maximum per paragraph
-//               - Add line breaks between different topics
-//               - Use white space to make it scannable
-            
-//             7. **Error Handling**:
-//               If there's an error, explain it conversationally:
-//               "I couldn't find any deals matching that name. You might want to try searching for a partial match instead."
-            
-//             8. **Table-Specific Insights**:
-//               For ${selectedTable} data, focus on relevant business metrics and KPIs.
-            
-//           `.trim(),
-//         },
-//         { role: "user", content: input },
-//         {
-//           role: "assistant",
-//           content: sqlError
-//             ? `Query error: ${sqlError}`
-//             : `Analysis: ${JSON.stringify({
-//                 results: result,
-//                 insights: analysis.insights,
-//               })}`,
-//         },
-//       ];
-
-//       const summaryResponse = await openai.invoke(summaryPrompt);
-//       const finalAnswer = summaryResponse.content.trim();
-
-//       // STEP 7: Enhanced session tracking
-//       await chatHistory.addUserMessage(input);
-//       await chatHistory.addAIMessage(finalAnswer);
-//       await setSessionMetadata(session_id, {
-//         last_table: selectedTable,
-//         last_sql: sql,
-//         last_result_count: result?.length || 0,
-//         last_execution_time: Date.now() - startTime,
-//         query_success: !sqlError,
-//         last_updated: new Date().toISOString(),
-//         table_prompt_used: tableConfig?.keywords.join(', '),
-//       });
-
-//       const executionTime = Date.now() - startTime;
-//       writeToLogFile(`\nresult: ${JSON.stringify(finalAnswer)}, \nexecutionTime: ${executionTime}ms, \nsql: ${sql}, \nsqlResponse: ${JSON.stringify(result)}`);
-
-//       console.log("result: ", finalAnswer);
-      
-//       // STEP 8: Return structured response for UI
-//       if (sqlError) {
-//         return {
-//           type: "text",
-//           content: `Query error: ${sqlError}`,
-//         };
-//       }
-
-//       // Enhanced chart detection using analysis
-//       if (analysis.hasNumericData && analysis.hasDateData && 
-//           analysis.bestDateColumn && analysis.bestNumericColumn && 
-//           result.length > 1) {
-//         return {
-//           type: "chart",
-//           chartType: "bar", 
-//           labels: result.map(row => row[analysis.bestDateColumn]),
-//           data: result.map(row => row[analysis.bestNumericColumn]),
-//           summary: finalAnswer,
-//           tableName: selectedTable,
-//         };
-//       } else if (result.length > 0) {
-//         return {
-//           type: "table",
-//           columns: Object.keys(result[0]),
-//           rows: result.map(row => Object.values(row)),
-//           summary: finalAnswer,
-//           tableName: selectedTable,
-//         };
-//       } else {
-//         return {
-//           type: "text",
-//           content: finalAnswer,
-//           tableName: selectedTable,
-//         };
-//       }
-
-//     } catch (error) {
-//       console.error("❌ Chain execution error:", error);
-
-//       // Graceful error handling with retry
-//       if (retryCount < 1) {
-//         console.log("🔄 Retrying...");
-//         return loadChain(session_id)({
-//           input,
-//           table,
-//           retryCount: retryCount + 1,
-//         });
-//       }
-
-//       return {
-//         type: "text",
-//         content: `I apologize, but I encountered an error processing your question. Please try rephrasing it or ask something else.`,
-//       };
-//     }
-//   };
-// }
-
-// module.exports = {
-//   loadChain,
-//   selectBestTable,
-// };
-
-
 const { openai } = require("../openaiService");
 const { runSQL } = require("../databaseService");
 const fs = require('fs');
-const {
-  getChatHistory,
-  getSessionMetadata,
-  setSessionMetadata,
-} = require("./memoryServiceRedis");
 
-// Import the new table-specific prompts
+// NEW: PostgreSQL-based memory service instead of Redis
+const { 
+  getChatHistory, 
+  getSessionMetadata, 
+  setSessionMetadata,
+  clearFailedQueries,
+  getSuccessfulQueriesOnly 
+} = require("./memoryServicePostgres");
+
+// Import the table-specific prompts
 const { TABLE_PROMPTS, getTablePrompt, selectBestTable } = require('./tablePrompts');
 
 function writeToLogFile(logMessage) {
@@ -435,7 +37,7 @@ const tableDescriptions = {
   cash_flow: "Tracks cash inflows and outflows by category and date, used for liquidity and cash management analysis.",
 };
 
-// NEW: Conversation continuity detection
+// Enhanced conversation continuity detection with error handling
 async function analyzeContinuity(input, pastMessages, sessionMetadata) {
   if (!pastMessages || pastMessages.length === 0) {
     return {
@@ -446,14 +48,19 @@ async function analyzeContinuity(input, pastMessages, sessionMetadata) {
     };
   }
 
-  // Get recent context (last 6 messages for better analysis)
-  const recentMessages = pastMessages.slice(-6);
+  // Filter out failed queries for better continuity analysis
+  const successfulMessages = pastMessages.filter(msg => 
+    !msg.content.includes('Query error:') && 
+    !msg.content.includes('SQL Error:') &&
+    !msg.content.includes('encountered an error')
+  );
+
+  const recentMessages = successfulMessages.slice(-6);
   const lastUserMessage = recentMessages.filter(m => m._getType?.() === 'human' || m.role === 'user').pop();
   const lastAiMessage = recentMessages.filter(m => m._getType?.() === 'ai' || m.role === 'assistant').pop();
 
-  // Time-based analysis
   const timeSinceLastQuery = sessionMetadata.last_updated ? 
-    (Date.now() - new Date(sessionMetadata.last_updated).getTime()) / (1000 * 60) : null; // minutes
+    (Date.now() - new Date(sessionMetadata.last_updated).getTime()) / (1000 * 60) : null;
 
   const continuityPrompt = [
     {
@@ -464,37 +71,35 @@ async function analyzeContinuity(input, pastMessages, sessionMetadata) {
         2. A CONTINUATION - following up, drilling down, or related to previous discussion
         3. A CLARIFICATION - asking for more details about the last response
         4. A MODIFICATION - similar question with different parameters
+        5. A RETRY - repeating a question that may have failed previously
 
         Context factors to consider:
         - Time gap: ${timeSinceLastQuery ? `${Math.round(timeSinceLastQuery)} minutes ago` : 'unknown'}
-        - Last table used: ${sessionMetadata.last_table || 'none'}
-        - Last query successful: ${sessionMetadata.query_success !== false}
-        - Previous result count: ${sessionMetadata.last_result_count || 0}
+        - Last successful table: ${sessionMetadata.last_successful_table || 'none'}
+        - Recent failures: ${sessionMetadata.recent_failures || 0}
+        - Last successful query: ${sessionMetadata.last_successful_query ? 'yes' : 'no'}
 
-        Analyze these patterns:
-        - Pronouns (it, them, those, that) suggest continuation
-        - Follow-up words (also, more, what about, how about) suggest continuation  
-        - Time references (this month, last week) may continue context
-        - Completely different business domains suggest new topic
-        - Questions about different data types suggest new topic
+        IMPORTANT: If this looks like a retry of a failed question, classify as "new_topic" to avoid referencing failed context.
 
         Respond with JSON only:
         {
           "isNewTopic": boolean,
-          "contextType": "fresh_start|continuation|clarification|modification|new_topic",
+          "contextType": "fresh_start|continuation|clarification|modification|new_topic|retry",
           "confidence": 0.0-1.0,
           "reasoning": "brief explanation",
           "suggestedTable": "table_name or null",
-          "contextElements": ["key phrases that influenced decision"]
+          "contextElements": ["key phrases that influenced decision"],
+          "isRetry": boolean
         }
       `.trim()
     },
     {
       role: "user", 
       content: `
-        Previous conversation context:
+        Previous successful conversation context:
         Last user question: "${lastUserMessage?.content || 'None'}"
         Last AI response: "${lastAiMessage?.content?.substring(0, 200) || 'None'}..."
+        Recent failures count: ${sessionMetadata.recent_failures || 0}
         
         Current question: "${input}"
         
@@ -507,61 +112,62 @@ async function analyzeContinuity(input, pastMessages, sessionMetadata) {
     const response = await openai.invoke(continuityPrompt);
     const analysis = JSON.parse(response.content);
     
-    // Add confidence adjustments based on time gaps
+    // Adjust confidence based on recent failures
+    if (sessionMetadata.recent_failures > 0) {
+      analysis.confidence *= 0.8;
+    }
+    
     if (timeSinceLastQuery && timeSinceLastQuery > 30) {
-      analysis.confidence *= 0.7; // Reduce confidence for old conversations
+      analysis.confidence *= 0.7;
     }
     
     return analysis;
   } catch (error) {
     console.error("❌ Continuity analysis error:", error);
-    // Fallback to simple heuristics
     return {
-      isNewTopic: !hasContextClues(input),
-      contextType: hasContextClues(input) ? 'continuation' : 'new_topic',
+      isNewTopic: true, // Default to new topic to avoid referencing potentially failed context
+      contextType: 'new_topic',
       confidence: 0.5,
-      reasoning: 'Fallback analysis due to error'
+      reasoning: 'Fallback analysis due to error',
+      isRetry: false
     };
   }
 }
 
-// Simple fallback heuristics for continuity detection
-function hasContextClues(input) {
-  const lowerInput = input.toLowerCase();
-  const continuationWords = [
-    'it', 'them', 'those', 'that', 'this', 'these',
-    'also', 'more', 'what about', 'how about', 'and',
-    'additionally', 'furthermore', 'moreover',
-    'same', 'similar', 'related', 'other'
-  ];
-  
-  return continuationWords.some(word => lowerInput.includes(word));
-}
-
-// Enhanced context building based on continuity
+// Enhanced context building with error filtering
 function buildContextualPrompt(input, continuityAnalysis, pastMessages, sessionMetadata, selectedTable) {
   const baseTablePrompt = getTablePrompt(selectedTable, input, sessionMetadata);
   
-  if (continuityAnalysis.isNewTopic) {
-    return baseTablePrompt; // Use standard table prompt for new topics
+  // For new topics or retries, use clean table prompt
+  if (continuityAnalysis.isNewTopic || continuityAnalysis.isRetry) {
+    return baseTablePrompt;
   }
 
-  // For continuations, enhance with conversation context
-  const recentContext = pastMessages.slice(-4);
+  // Filter out failed queries from context
+  const cleanMessages = pastMessages.filter(msg => 
+    !msg.content.includes('Query error:') && 
+    !msg.content.includes('SQL Error:') &&
+    !msg.content.includes('encountered an error')
+  );
+
+  const recentContext = cleanMessages.slice(-4);
+  
   const contextualEnhancement = `
     CONVERSATION CONTEXT:
     This question is a ${continuityAnalysis.contextType} (confidence: ${continuityAnalysis.confidence.toFixed(2)}).
     Reasoning: ${continuityAnalysis.reasoning}
     
-    Recent conversation:
+    Recent successful conversation:
     ${recentContext.map(m => `${m._getType?.() || m.role}: ${m.content}`).join('\n')}
     
     CONTINUITY INSTRUCTIONS:
-    - Reference previous results when relevant
+    - Reference previous successful results when relevant
     - Use "the previous data showed" or "building on that"
     - Maintain context about filters, date ranges, or specific entities mentioned
-    - If user says "show me more" or "what about X", relate back to previous query
+    - If user says "show me more" or "what about X", relate back to previous successful query
     - Keep the same table focus unless explicitly asked to change
+    
+    CRITICAL: You must ALWAYS return valid SQL that starts with SELECT. Never return explanatory text or summaries.
     
     ${baseTablePrompt}
   `.trim();
@@ -570,40 +176,53 @@ function buildContextualPrompt(input, continuityAnalysis, pastMessages, sessionM
 }
 
 function cleanSQL(text) {
-  return text
+  // More robust SQL extraction
+  let sql = text
     .toLowerCase()
     .trim()
     .replace(/```sql|```/gi, "")
+    .replace(/^[^s]*select/i, 'select') // Remove any text before SELECT
     .trim();
+
+  // If no SELECT found, this might be a text response instead of SQL
+  if (!sql.includes('select')) {
+    console.warn("⚠️ No SELECT statement found in response:", text);
+    return null;
+  }
+
+  return sql;
 }
 
-//SQL validation and optimization
+// Enhanced SQL validation
 function validateAndOptimizeSQL(sql, tableName) {
   const issues = [];
   const suggestions = [];
 
-  if (
-    !sql.includes("limit") &&
-    !sql.includes("count") &&
-    !sql.includes("sum")
-  ) {
+  if (!sql) {
+    issues.push("No valid SQL query generated");
+    return { issues, suggestions, isValid: false };
+  }
+
+  if (!sql.toLowerCase().startsWith("select")) {
+    issues.push("Query must start with SELECT");
+  }
+
+  if (!sql.includes(tableName)) {
+    issues.push(`Query should reference table: ${tableName}`);
+  }
+
+  if (!sql.includes("limit") && !sql.includes("count") && !sql.includes("sum")) {
     suggestions.push("Consider adding LIMIT for large datasets");
   }
 
   if (sql.includes("select *")) {
-    suggestions.push(
-      "Consider selecting specific columns for better performance"
-    );
-  }
-
-  if (sql.includes("date") && !sql.includes("::date") && !sql.includes("'")) {
-    issues.push("Date values should be quoted");
+    suggestions.push("Consider selecting specific columns for better performance");
   }
 
   return { issues, suggestions, isValid: issues.length === 0 };
 }
 
-//Result analysis and insights  
+// Result analysis remains the same
 function analyzeResults(results, question, tableName) {
   if (!Array.isArray(results) || results.length === 0) {
     return { isEmpty: true, insights: [] };
@@ -620,12 +239,10 @@ function analyzeResults(results, question, tableName) {
     (key) => key.includes("date") || key.includes("time")
   );
 
-  // Find best columns for charting
   let bestNumericColumn = null;
   let bestDateColumn = null;
   
   if (numericColumns.length > 0) {
-    // Prefer amount columns for charts
     bestNumericColumn = numericColumns.find(col => 
       col.includes('amount') || col.includes('balance') || col.includes('total')
     ) || numericColumns[0];
@@ -639,7 +256,6 @@ function analyzeResults(results, question, tableName) {
   }
 
   if (dateColumns.length > 0) {
-    // Prefer standard date columns
     bestDateColumn = dateColumns.find(col => 
       col === 'date' || col.includes('date') && !col.includes('create')
     ) || dateColumns[0];
@@ -660,29 +276,34 @@ function analyzeResults(results, question, tableName) {
   };
 }
 
-//Main chain with enhanced continuity detection
+// Main chain with enhanced error handling and recovery
 async function loadChain(session_id) {
   const chatHistory = getChatHistory(session_id);
 
   return async ({ input, table = null, retryCount = 0 }) => {
+    const startTime = Date.now();
+    let sqlError = null;
+    let sql = null;
+    let selectedTable = null;
+
     try {
-      const pastMessages = await chatHistory.getMessages();
+      // Get only successful messages for context (filtered in PostgreSQL service)
+      const pastMessages = await getSuccessfulQueriesOnly(session_id);
       const sessionMetadata = (await getSessionMetadata(session_id)) || {};
 
-      // NEW STEP 1: Analyze conversation continuity
+      // STEP 1: Analyze conversation continuity with error awareness
       const continuityAnalysis = await analyzeContinuity(input, pastMessages, sessionMetadata);
       console.log("🔄 Continuity Analysis:", continuityAnalysis);
 
-      // STEP 2: Enhanced table selection using continuity context
-      let selectedTable = table?.toLowerCase();
+      // STEP 2: Enhanced table selection
+      selectedTable = table?.toLowerCase();
       if (!selectedTable) {
-        // If it's a continuation and we have a recent successful table, prefer that
         if (!continuityAnalysis.isNewTopic && 
-            sessionMetadata.last_table && 
-            sessionMetadata.query_success !== false &&
+            !continuityAnalysis.isRetry &&
+            sessionMetadata.last_successful_table && 
             continuityAnalysis.confidence > 0.6) {
-          selectedTable = sessionMetadata.last_table;
-          console.log("🔄 Using previous table due to continuation:", selectedTable);
+          selectedTable = sessionMetadata.last_successful_table;
+          console.log("🔄 Using previous successful table:", selectedTable);
         } else {
           selectedTable = continuityAnalysis.suggestedTable || 
                         await selectBestTable(input, pastMessages, sessionMetadata);
@@ -690,10 +311,7 @@ async function loadChain(session_id) {
         console.log("🎯 Selected table:", selectedTable);
       }
 
-      // STEP 3: Generate SQL using contextual prompt
-      const recentContext = pastMessages.slice(-4);
-      
-      // Get contextually-aware table prompt
+      // STEP 3: Generate SQL with enhanced error recovery
       const tablePrompt = buildContextualPrompt(
         input, 
         continuityAnalysis, 
@@ -702,27 +320,61 @@ async function loadChain(session_id) {
         selectedTable
       );
 
-      console.log(tablePrompt)
-      
+      // Build SQL prompt with emphasis on returning valid SQL
       const sqlPrompt = [
         {
           role: "system",
-          content: tablePrompt
+          content: `${tablePrompt}
+
+CRITICAL REQUIREMENTS:
+1. You MUST return ONLY a valid SQL SELECT statement
+2. Do NOT return explanations, summaries, or text
+3. The SQL must start with SELECT and reference the ${selectedTable} table
+4. If you cannot generate SQL, return: SELECT 'ERROR: Cannot generate query' as error_message;`
         },
-        ...recentContext.map((m) => ({
+        // Only include recent successful context
+        ...pastMessages.slice(-2).map((m) => ({
           role: m._getType?.() || m.role,
           content: m.content,
         })),
-        { role: "user", content: input },
+        { role: "user", content: `Generate SQL for: ${input}` },
       ];
 
       const sqlResponse = await openai.invoke(sqlPrompt);
-      const sql = cleanSQL(sqlResponse.content);
+      sql = cleanSQL(sqlResponse.content);
 
-      // STEP 4: Validate SQL
+      // STEP 4: Enhanced SQL validation with fallback
+      if (!sql) {
+        console.warn("⚠️ No valid SQL generated, attempting fallback");
+        
+        // Fallback: Try with simpler prompt
+        const fallbackPrompt = [
+          {
+            role: "system",
+            content: `Generate a simple SQL SELECT query for the ${selectedTable} table to answer: "${input}". Return ONLY the SQL query, nothing else.`
+          },
+          { role: "user", content: input }
+        ];
+        
+        const fallbackResponse = await openai.invoke(fallbackPrompt);
+        sql = cleanSQL(fallbackResponse.content);
+        
+        if (!sql) {
+          throw new Error("Failed to generate valid SQL query");
+        }
+      }
+
       const validation = validateAndOptimizeSQL(sql, selectedTable);
-      if (!validation.isValid && retryCount === 0) {
+      if (!validation.isValid) {
         console.warn("⚠️ SQL validation issues:", validation.issues);
+        if (retryCount === 0) {
+          // Try once more with validation feedback
+          return loadChain(session_id)({
+            input: `${input} (Previous attempt had issues: ${validation.issues.join(', ')})`,
+            table: selectedTable,
+            retryCount: retryCount + 1,
+          });
+        }
       }
 
       console.log("🔍 Session ID:", session_id);
@@ -730,15 +382,12 @@ async function loadChain(session_id) {
       console.log("🔍 Input question:", input);
       console.log("⚡ Generated SQL:", sql);
 
-      if (!sql.startsWith("select")) {
-        return "⚠️ Only SELECT queries are supported.";
+      if (!sql.toLowerCase().startsWith("select")) {
+        throw new Error("Only SELECT queries are supported");
       }
 
       // STEP 5: Execute with timeout
       let result;
-      let sqlError = null;
-      const startTime = Date.now();
-
       try {
         result = await Promise.race([
           runSQL(sql),
@@ -749,36 +398,47 @@ async function loadChain(session_id) {
       } catch (err) {
         sqlError = err.message;
         console.error("❌ SQL Error:", sqlError);
+        
+        // Update failure tracking
+        await setSessionMetadata(session_id, {
+          ...sessionMetadata,
+          recent_failures: (sessionMetadata.recent_failures || 0) + 1,
+          last_error: sqlError,
+          last_failed_sql: sql,
+          last_updated: new Date().toISOString(),
+        });
+
+        // For SQL errors, try alternative approach on first retry
+        if (retryCount === 0 && !sqlError.includes('timeout')) {
+          console.log("🔄 Retrying with different approach...");
+          return loadChain(session_id)({
+            input: `Create a simpler query for: ${input}`,
+            table: selectedTable,
+            retryCount: retryCount + 1,
+          });
+        }
+
+        throw new Error(sqlError);
       }
 
       // STEP 6: Analyze results
       const analysis = analyzeResults(result, input, selectedTable);
 
       if (analysis.isEmpty && !sqlError) {
-        // Smart fallback with continuity-aware suggestions
-        const tableConfig = TABLE_PROMPTS[selectedTable];
+        // Handle empty results
         const alternativePrompt = [
           {
             role: "system",
             content: `
-              No data found in ${selectedTable} table. 
-              
-              Conversation Context: ${continuityAnalysis.contextType} (${continuityAnalysis.reasoning})
+              No data found in ${selectedTable} table for the query: "${input}"
               
               Table purpose: ${tableDescriptions[selectedTable]}
-              Common keywords: ${tableConfig?.keywords.join(', ')}
               
-              ${!continuityAnalysis.isNewTopic ? 
-                'Since this is a follow-up question, consider if the user might be asking about related data in the same table or a different time period.' : 
-                'Available alternative tables:'
-              }
-              
+              Suggest alternative approaches or tables:
               ${Object.entries(tableDescriptions)
                 .filter(([key]) => key !== selectedTable)
                 .map(([key, desc]) => `- ${key}: ${desc}`)
                 .join("\n")}
-              
-              Provide contextually appropriate suggestions based on conversation flow.
             `.trim(),
           },
           {
@@ -790,104 +450,79 @@ async function loadChain(session_id) {
         const altResponse = await openai.invoke(alternativePrompt);
         const message = `I couldn't find any data for that question in the ${selectedTable} table.\n\n${altResponse.content}`;
 
+        // Save successful interaction (even if empty results)
         await chatHistory.addUserMessage(input);
         await chatHistory.addAIMessage(message);
         await setSessionMetadata(session_id, {
           ...sessionMetadata,
-          last_table: selectedTable,
+          last_successful_table: selectedTable,
           last_query_empty: true,
-          suggestion_made: true,
-          continuity_analysis: continuityAnalysis,
+          recent_failures: 0, // Reset failures on successful execution
+          last_updated: new Date().toISOString(),
         });
 
-        return message;
+        return { type: "text", content: message };
       }
 
-      // STEP 7: Generate enhanced summary with continuity context
-      const tableConfig = TABLE_PROMPTS[selectedTable];
+      // STEP 7: Generate summary (only if we have results)
       const summaryPrompt = [
         {
           role: "system",
           content: `
-            You are a business data analyst specializing in ${selectedTable} data.
+            You are a business data analyst. Summarize the query results naturally.
             
             Context:
-            - Table: ${selectedTable} (${tableDescriptions[selectedTable]})
+            - Table: ${selectedTable}
             - Question: "${input}"
-            - Records found: ${analysis.recordCount || 0}
-            - Has numeric data: ${analysis.hasNumericData}
-            - Table focus: ${tableConfig?.keywords.join(', ')}
+            - Records: ${analysis.recordCount || 0}
             
-            CONVERSATION CONTEXT:
-            This is a ${continuityAnalysis.contextType} with ${(continuityAnalysis.confidence * 100).toFixed(0)}% confidence.
-            ${continuityAnalysis.reasoning}
-            
-            ${!continuityAnalysis.isNewTopic ? `
-            CONTINUITY INSTRUCTIONS:
-            - Reference previous conversation when relevant
-            - Use transitional phrases like "Building on our previous discussion..." or "Following up on that..."
-            - Compare results to previous queries when appropriate
-            - Maintain conversational flow
-            ` : ''}
-            
-            RESPONSE STYLE:
-            Write like you're having a conversation with a business colleague. Use natural language, not markdown formatting.
-            
-            [Rest of original formatting instructions remain the same...]
+            Write conversationally, not in markdown. Be concise and insightful.
           `.trim(),
         },
         { role: "user", content: input },
         {
           role: "assistant",
-          content: sqlError
-            ? `Query error: ${sqlError}`
-            : `Analysis: ${JSON.stringify({
-                results: result,
-                insights: analysis.insights,
-              })}`,
+          content: `Results: ${JSON.stringify(result.slice(0, 5))}${result.length > 5 ? ` (showing first 5 of ${result.length} records)` : ''}`,
         },
       ];
 
       const summaryResponse = await openai.invoke(summaryPrompt);
       const finalAnswer = summaryResponse.content.trim();
 
-      // STEP 8: Enhanced session tracking with continuity data
+      // STEP 8: Save successful interaction
       await chatHistory.addUserMessage(input);
       await chatHistory.addAIMessage(finalAnswer);
       await setSessionMetadata(session_id, {
         ...sessionMetadata,
-        last_table: selectedTable,
+        last_successful_table: selectedTable,
         last_sql: sql,
         last_result_count: result?.length || 0,
         last_execution_time: Date.now() - startTime,
-        query_success: !sqlError,
+        recent_failures: 0, // Reset failures on success
         last_updated: new Date().toISOString(),
-        table_prompt_used: tableConfig?.keywords.join(', '),
         continuity_analysis: continuityAnalysis,
         conversation_turns: (sessionMetadata.conversation_turns || 0) + 1,
       });
 
-      const executionTime = Date.now() - startTime;
-      writeToLogFile(`\nresult: ${JSON.stringify(finalAnswer)}, \nexecutionTime: ${executionTime}ms, \nsql: ${sql}, \nsqlResponse: ${JSON.stringify(result)}, \ncontinuity: ${JSON.stringify(continuityAnalysis)}`);
+      // Clear old failed queries periodically
+      if ((sessionMetadata.conversation_turns || 0) % 10 === 0) {
+        await clearFailedQueries(session_id);
+      }
 
-      console.log("result: ", finalAnswer);
+      const executionTime = Date.now() - startTime;
+      writeToLogFile(`SUCCESS - Session: ${session_id}, Time: ${executionTime}ms, SQL: ${sql}, Results: ${result.length} rows`);
+
+      console.log("✅ Success:", finalAnswer);
       
-      // STEP 9: Return structured response for UI with continuity info
+      // STEP 9: Return structured response
       const baseResponse = {
         continuityAnalysis: continuityAnalysis,
         tableName: selectedTable,
-        isFollowUp: !continuityAnalysis.isNewTopic
+        isFollowUp: !continuityAnalysis.isNewTopic,
+        executionTime: executionTime
       };
 
-      if (sqlError) {
-        return {
-          ...baseResponse,
-          type: "text",
-          content: `Query error: ${sqlError}`,
-        };
-      }
-
-      // Enhanced chart detection using analysis
+      // Enhanced chart detection
       if (analysis.hasNumericData && analysis.hasDateData && 
           analysis.bestDateColumn && analysis.bestNumericColumn && 
           result.length > 1) {
@@ -917,20 +552,29 @@ async function loadChain(session_id) {
 
     } catch (error) {
       console.error("❌ Chain execution error:", error);
+      
+      // Log the failure
+      writeToLogFile(`ERROR - Session: ${session_id}, Error: ${error.message}, SQL: ${sql || 'none'}, Retry: ${retryCount}`);
 
-      // Graceful error handling with retry
+      // Don't save failed attempts to chat history to avoid contaminating future queries
+      const errorMessage = retryCount > 0 ? 
+        `I'm having trouble processing that question. Could you try rephrasing it or asking something different?` :
+        `Let me try a different approach to answer your question.`;
+
+      // One retry with different strategy
       if (retryCount < 1) {
-        console.log("🔄 Retrying...");
+        console.log("🔄 Retrying with different strategy...");
         return loadChain(session_id)({
-          input,
-          table,
+          input: `Please create a simple query to ${input}`,
+          table: table,
           retryCount: retryCount + 1,
         });
       }
 
       return {
         type: "text",
-        content: `I apologize, but I encountered an error processing your question. Please try rephrasing it or ask something else.`,
+        content: errorMessage,
+        error: true
       };
     }
   };
@@ -939,5 +583,5 @@ async function loadChain(session_id) {
 module.exports = {
   loadChain,
   selectBestTable,
-  analyzeContinuity, // Export the new function
+  analyzeContinuity,
 };
