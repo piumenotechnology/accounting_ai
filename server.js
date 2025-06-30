@@ -11,12 +11,11 @@ const authRoutes = require('./routes/authRoutes');
 
 app.use(cors());
 
-
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// API Routes
+// // API Routes
 app.use('/chat', chatRoutes);
 app.use('/import', importRoutes);
 app.use('/auth', authRoutes);

@@ -154,7 +154,8 @@ function mapSheetsData(allSheetsData) {
     'pl',
     'bs',
     'cash_flow',
-    'try_sheet'
+    'try_sheet',
+    'TEST'
   ];
 
   for (const [sheetName, rows] of Object.entries(allSheetsData)) {

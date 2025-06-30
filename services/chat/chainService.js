@@ -1,8 +1,7 @@
 const { openai } = require("../openaiService");
 const { runSQL } = require("../databaseService");
-const fs = require('fs');
+// const fs = require('fs');
 
-// NEW: PostgreSQL-based memory service instead of Redis
 const { 
   getChatHistory, 
   getSessionMetadata, 
@@ -12,18 +11,18 @@ const {
 } = require("./memoryServicePostgres");
 
 // Import the table-specific prompts
-const { TABLE_PROMPTS, getTablePrompt, selectBestTable } = require('./tablePrompts');
+const { getTablePrompt, selectBestTable } = require('./tablePrompts');
 
-function writeToLogFile(logMessage) {
-  const timestamp = new Date().toISOString();
-  const logEntry = `${timestamp} - ${logMessage}\n`;
+// function writeToLogFile(logMessage) {
+//   const timestamp = new Date().toISOString();
+//   const logEntry = `${timestamp} - ${logMessage}\n`;
 
-  fs.appendFile('app.log', logEntry, (err) => {
-    if (err) {
-      console.error('Error writing to log file:', err);
-    }
-  });
-};
+//   fs.appendFile('app.log', logEntry, (err) => {
+//     if (err) {
+//       console.error('Error writing to log file:', err);
+//     }
+//   });
+// };
 
 const tableDescriptions = {
   closed_deal: "Tracks closed sales deals such as sponsorships and delegate registrations.",
@@ -510,7 +509,7 @@ CRITICAL REQUIREMENTS:
       }
 
       const executionTime = Date.now() - startTime;
-      writeToLogFile(`SUCCESS - Session: ${session_id}, Time: ${executionTime}ms, SQL: ${sql}, Results: ${result.length} rows`);
+      // writeToLogFile(`SUCCESS - Session: ${session_id}, Time: ${executionTime}ms, SQL: ${sql}, Results: ${result.length} rows`);
 
       console.log("✅ Success:", finalAnswer);
       
@@ -527,25 +526,28 @@ CRITICAL REQUIREMENTS:
           analysis.bestDateColumn && analysis.bestNumericColumn && 
           result.length > 1) {
         return {
-          ...baseResponse,
+          // ...baseResponse,
           type: "chart",
           chartType: "bar", 
           labels: result.map(row => row[analysis.bestDateColumn]),
           data: result.map(row => row[analysis.bestNumericColumn]),
+          sql: sql,
           summary: finalAnswer,
         };
       } else if (result.length > 0) {
         return {
-          ...baseResponse,
+          // ...baseResponse,
           type: "table",
           columns: Object.keys(result[0]),
           rows: result.map(row => Object.values(row)),
+          sql: sql,
           summary: finalAnswer,
         };
       } else {
         return {
-          ...baseResponse,
+          // ...baseResponse,
           type: "text",
+          sql: sql,
           content: finalAnswer,
         };
       }
@@ -554,7 +556,7 @@ CRITICAL REQUIREMENTS:
       console.error("❌ Chain execution error:", error);
       
       // Log the failure
-      writeToLogFile(`ERROR - Session: ${session_id}, Error: ${error.message}, SQL: ${sql || 'none'}, Retry: ${retryCount}`);
+      // writeToLogFile(`ERROR - Session: ${session_id}, Error: ${error.message}, SQL: ${sql || 'none'}, Retry: ${retryCount}`);
 
       // Don't save failed attempts to chat history to avoid contaminating future queries
       const errorMessage = retryCount > 0 ? 
