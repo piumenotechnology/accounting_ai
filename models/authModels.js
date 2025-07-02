@@ -4,10 +4,6 @@ const authModels = {
     getUserByEmail: async (email) => {
         const query = 'SELECT * FROM users WHERE email = $1';
         const values = [email];
-
-        console.log('🔍 Fetching user by email:', email);
-        console.log('🔍 Query:', query);
-
         try {
             const result = await pool.query(query, values);
             return result.rows[0]; // Return the first user found   
