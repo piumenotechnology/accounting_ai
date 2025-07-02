@@ -214,39 +214,39 @@ const TABLE_PROMPTS = {
   },
 
   pl: {
-    // basePrompt: `
-    //   You are generating PostgreSQL queries for the PL (Profit & Loss) table - income statement data.
+    basePrompt: `
+      You are generating PostgreSQL queries for the PL (Profit & Loss) table - income statement data.
       
-    //   Schema: pl(date, name, amount, category, line_type)
-    //   category : rent_and_occupancy, gross_profit, profit, salaries, direct_costs, credit_card_charges, professional_fees, expenses, onsite_costs, other_expenses, telecommunications, meals_and_entertainment, overhead, commission_expense, automobile_and_travel, income, office_and_general, technology, marketing, interest_and_bank_charges
-    //   line_type : data, total
+      Schema: pl(date, name, amount, category, line_type)
+      category : rent_and_occupancy, gross_profit, profit, salaries, direct_costs, credit_card_charges, professional_fees, expenses, onsite_costs, other_expenses, telecommunications, meals_and_entertainment, overhead, commission_expense, automobile_and_travel, income, office_and_general, technology, marketing, interest_and_bank_charges
+      line_type : data, total
       
-    //   PURPOSE: Analyze financial performance, profitability, and income statement trends.
+      PURPOSE: Analyze financial performance, profitability, and income statement trends.
       
-    //   SEARCH PATTERNS:  
-    //   - Account names → name ILIKE '%search%'
-    //   - Date ranges → date BETWEEN 'start' AND 'end'
-    //   - Specific periods → EXTRACT(month FROM date) = 1
+      SEARCH PATTERNS:  
+      - Account names → name ILIKE '%search%'
+      - Date ranges → date BETWEEN 'start' AND 'end'
+      - Specific periods → EXTRACT(month FROM date) = 1
       
-    //   P&L ANALYSIS:
-    //   - Revenue accounts: WHERE name ILIKE '%revenue%' OR name ILIKE '%income%'
-    //   - Expense accounts: WHERE name ILIKE '%expense%' OR amount < 0
-    //   - Net income: SELECT SUM(amount) FROM pl
-    //   - Monthly P&L: GROUP BY DATE_TRUNC('month', date)
-    //   - Account totals: GROUP BY name
+      P&L ANALYSIS:
+      - Revenue accounts: WHERE name ILIKE '%revenue%' OR name ILIKE '%income%'
+      - Expense accounts: WHERE name ILIKE '%expense%' OR amount < 0
+      - Net income: SELECT SUM(amount) FROM pl
+      - Monthly P&L: GROUP BY DATE_TRUNC('month', date)
+      - Account totals: GROUP BY name
       
-    //   PROFITABILITY METRICS:
-    //   - Gross profit: where name = 'gross profit' and line_type = 'total
-    //   - Operating income: Revenue minus operating expenses  
-    //   - Net margin: Net income / Total revenue
-    //   - Year-over-year: Compare same periods
+      PROFITABILITY METRICS:
+      - Gross profit: where name = 'gross profit' and line_type = 'total
+      - Operating income: Revenue minus operating expenses  
+      - Net margin: Net income / Total revenue
+      - Year-over-year: Compare same periods
       
-    //   EXAMPLES:
-    //   - "Total revenue 2024" → WHERE name ILIKE '%revenue%' AND EXTRACT(year FROM date) = 2024
-    //   - "Operating expenses" → WHERE name ILIKE '%expense%' AND name NOT ILIKE '%interest%'
-    //   - "Net income January" → WHERE DATE_TRUNC('month', date) = '2024-01-01'
-    //   - "Marketing costs" → WHERE name ILIKE '%marketing%'
-    // `,
+      EXAMPLES:
+      - "Total revenue 2024" → WHERE name ILIKE '%revenue%' AND EXTRACT(year FROM date) = 2024
+      - "Operating expenses" → WHERE name ILIKE '%expense%' AND name NOT ILIKE '%interest%'
+      - "Net income January" → WHERE DATE_TRUNC('month', date) = '2024-01-01'
+      - "Marketing costs" → WHERE name ILIKE '%marketing%'
+    `,
     // basePrompt: `
     //  # PostgreSQL P&L Query Generation Assistant
 
@@ -353,100 +353,100 @@ const TABLE_PROMPTS = {
     //   - Optimize queries for performance on large datasets
 
     //   Generate accurate, efficient PostgreSQL queries that provide meaningful financial insights from the P&L data.`,
-    basePrompt:`
-      # PostgreSQL Profit & Loss (P&L) Query Generation Assistant
+    // basePrompt:`
+    //   # PostgreSQL Profit & Loss (P&L) Query Generation Assistant
 
-      You generate accurate and efficient PostgreSQL queries for analyzing Profit & Loss (Income Statement) data. Prioritize business context, financial accuracy, and clean formatting.
+    //   You generate accurate and efficient PostgreSQL queries for analyzing Profit & Loss (Income Statement) data. Prioritize business context, financial accuracy, and clean formatting.
 
-      ## Database Schema
-      **Table:** pl (Profit & Loss)
+    //   ## Database Schema
+    //   **Table:** pl (Profit & Loss)
 
-      - date: Date of the financial entry
-      - name: Description of the line item
-      - amount: Monetary value (positive = income, negative = expense)
-      - category: Financial category
-      - line_type: 
-        - 'data' = detailed entries (default)
-        - 'total' = category-level rollups
+    //   - date: Date of the financial entry
+    //   - name: Description of the line item
+    //   - amount: Monetary value (positive = income, negative = expense)
+    //   - category: Financial category
+    //   - line_type: 
+    //     - 'data' = detailed entries (default)
+    //     - 'total' = category-level rollups
 
-      ## Categories
-      - income, gross_profit, profit
-      - rent_and_occupancy, salaries, direct_costs
-      - credit_card_charges, professional_fees
-      - expenses, other_expenses, onsite_costs
-      - telecommunications, meals_and_entertainment
-      - overhead, commission_expense, automobile_and_travel
-      - office_and_general, technology, marketing
-      - interest_and_bank_charges
+    //   ## Categories
+    //   - income, gross_profit, profit
+    //   - rent_and_occupancy, salaries, direct_costs
+    //   - credit_card_charges, professional_fees
+    //   - expenses, other_expenses, onsite_costs
+    //   - telecommunications, meals_and_entertainment
+    //   - overhead, commission_expense, automobile_and_travel
+    //   - office_and_general, technology, marketing
+    //   - interest_and_bank_charges
 
-      ## Business Logic
-      - Total Expenses = expenses + other_expenses
-      - Use income for revenue
-      - Use profit and gross_profit for profitability metrics
+    //   ## Business Logic
+    //   - Total Expenses = expenses + other_expenses
+    //   - Use income for revenue
+    //   - Use profit and gross_profit for profitability metrics
 
-      ## Line Type Rules (Based on Data)
+    //   ## Line Type Rules (Based on Data)
 
-      - Default to \`line_type = 'data'\`
-      - Use \`line_type = 'total'\` **only if**:
-        - The user is asking for a **summary of a known category**
-        - AND a category-level total entry exists in the data
+    //   - Default to \`line_type = 'data'\`
+    //   - Use \`line_type = 'total'\` **only if**:
+    //     - The user is asking for a **summary of a known category**
+    //     - AND a category-level total entry exists in the data
 
-      - Even if the user says “total,” use \`line_type = 'data'\` if:
-        - The request is about a **specific item inside a category**, such as “manager bonuses” or “consulting fees”
-        - Those items are not aggregated into a unique line_type = 'total' row
+    //   - Even if the user says “total,” use \`line_type = 'data'\` if:
+    //     - The request is about a **specific item inside a category**, such as “manager bonuses” or “consulting fees”
+    //     - Those items are not aggregated into a unique line_type = 'total' row
 
-      ### Summary:
+    //   ### Summary:
 
-      - Use \`line_type = 'total'\` when:
-        - User asks for totals of full categories (e.g. “marketing expenses”, “total salaries”)
-        - The category exists and has a total row (e.g. “total 5000 marketing”)
+    //   - Use \`line_type = 'total'\` when:
+    //     - User asks for totals of full categories (e.g. “marketing expenses”, “total salaries”)
+    //     - The category exists and has a total row (e.g. “total 5000 marketing”)
 
-      - Use \`line_type = 'data'\` when:
-        - User asks for specific items or transactions
-        - The request mentions terms like: "each", "list", "entries", "transactions", "all payments", "individual", "show details"
-        - The item mentioned is not the category itself (e.g. “total manager bonus” → \`line_type = 'data'\`)
+    //   - Use \`line_type = 'data'\` when:
+    //     - User asks for specific items or transactions
+    //     - The request mentions terms like: "each", "list", "entries", "transactions", "all payments", "individual", "show details"
+    //     - The item mentioned is not the category itself (e.g. “total manager bonus” → \`line_type = 'data'\`)
 
-      ### Examples:
+    //   ### Examples:
 
-      | User Request                             | line_type |
-      |------------------------------------------|-----------|
-      | “What are my marketing expenses?”        | total     |
-      | “Show all rent payments”                 | data      |
-      | “Total manager bonuses?”                 | data      |
-      | “Break down consulting fees”             | data      |
-      | “What's the gross profit for Q1?”        | total     |
-      | “How much did I spend on bank charges?”  | data      |
+    //   | User Request                             | line_type |
+    //   |------------------------------------------|-----------|
+    //   | “What are my marketing expenses?”        | total     |
+    //   | “Show all rent payments”                 | data      |
+    //   | “Total manager bonuses?”                 | data      |
+    //   | “Break down consulting fees”             | data      |
+    //   | “What's the gross profit for Q1?”        | total     |
+    //   | “How much did I spend on bank charges?”  | data      |
 
-      ## Query Guidelines
+    //   ## Query Guidelines
 
-      1. Always include a date filter (e.g. WHERE date BETWEEN ...)
-      2. Use \`SUM(amount)\` for totals, \`COUNT(*)\` for entries
-      3. Group by category, date, or relevant dimensions as needed
-      4. Use \`date_trunc('month', date)\` for time-based grouping
-      5. Order results by date or amount logically
-      6. Wrap totals in \`COALESCE()\` to avoid nulls
-      7. Add SQL comments for clarity on complex logic
+    //   1. Always include a date filter (e.g. WHERE date BETWEEN ...)
+    //   2. Use \`SUM(amount)\` for totals, \`COUNT(*)\` for entries
+    //   3. Group by category, date, or relevant dimensions as needed
+    //   4. Use \`date_trunc('month', date)\` for time-based grouping
+    //   5. Order results by date or amount logically
+    //   6. Wrap totals in \`COALESCE()\` to avoid nulls
+    //   7. Add SQL comments for clarity on complex logic
 
-      ## Output Format
+    //   ## Output Format
 
-      1. Return a clean, formatted SQL query
-      2. Briefly explain the business logic used
-      3. Apply relevant filters based on the user's intent
-      4. Add helpful comments inside the SQL
-      5. Suggest variations (e.g. breakdowns by month, by category) if useful
+    //   1. Return a clean, formatted SQL query
+    //   2. Briefly explain the business logic used
+    //   3. Apply relevant filters based on the user's intent
+    //   4. Add helpful comments inside the SQL
+    //   5. Suggest variations (e.g. breakdowns by month, by category) if useful
 
-      ## Supported Request Examples
+    //   ## Supported Request Examples
 
-      - “Show monthly revenue trends”
-      - “Compare expenses by category for Q1”
-      - “Calculate profit margin by month”
-      - “Find top 5 expense categories this year”
-      - “List all consulting fee transactions”
-      - “What are my marketing expenses in 2024?”
-      - “Show rent and travel costs in March”
-      - “Break down income vs expenses monthly”
+    //   - “Show monthly revenue trends”
+    //   - “Compare expenses by category for Q1”
+    //   - “Calculate profit margin by month”
+    //   - “Find top 5 expense categories this year”
+    //   - “List all consulting fee transactions”
+    //   - “What are my marketing expenses in 2024?”
+    //   - “Show rent and travel costs in March”
+    //   - “Break down income vs expenses monthly”
 
-      Only generate valid PostgreSQL queries. Focus on clarity, correctness, and business relevance.`,
+    //   Only generate valid PostgreSQL queries. Focus on clarity, correctness, and business relevance.`,
     keywords: ['profit', 'loss', 'income', 'revenue', 'expenses', 'net income', 'p&l']
   },
   
@@ -534,7 +534,6 @@ const TABLE_PROMPTS = {
   //     - When user asks for "category totals" or "subtotals", use line_type = 'subtotal'
   //     - When user asks for "main totals" or "balance sheet totals", use line_type = 'total'
   //     `,
-
     basePrompt: `
       You are generating PostgreSQL queries for the BS (Balance Sheet) table - financial position data.
       Schema: bs(account_name, month, year, amount, line_type)
@@ -581,6 +580,7 @@ const TABLE_PROMPTS = {
     //   `,
     keywords: ['balance sheet', 'assets', 'liabilities', 'equity', 'cash', 'debt', 'capital', 'financial position', 'current assets', 'non-current assets', 'current liabilities', 'retained earnings']
   },
+
   cash_flow: {
     basePrompt: `
       You are generating PostgreSQL queries for the CASH_FLOW table - cash movement analysis.

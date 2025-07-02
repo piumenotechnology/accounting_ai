@@ -271,10 +271,12 @@ async function getSessionStats(sessionId) {
 }
 
 // Cleanup old sessions (maintenance function)
-async function cleanupOldSessions(daysOld = 30) {
+async function cleanupOldSessions(daysOld = 1) {
 
   try {
     const cutoffDate = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000);
+
+    console.log(`🧹 Cleanup: Deleting sessions older than ${daysOld} days (cutoff: ${cutoffDate.toISOString()})`);
     
     // Delete old messages
     const messageResult = await pgClient.query(

@@ -106,7 +106,6 @@ async function analyzeContinuity(input, pastMessages, sessionMetadata) {
       `.trim()
     }
   ];
-
   try {
     const response = await openai.invoke(continuityPrompt);
     const analysis = JSON.parse(response.content);
@@ -123,13 +122,13 @@ async function analyzeContinuity(input, pastMessages, sessionMetadata) {
     return analysis;
   } catch (error) {
     console.error("❌ Continuity analysis error:", error);
-    return {
-      isNewTopic: true, // Default to new topic to avoid referencing potentially failed context
-      contextType: 'new_topic',
-      confidence: 0.5,
-      reasoning: 'Fallback analysis due to error',
-      isRetry: false
-    };
+  return {
+    isNewTopic: true, // Default to new topic to avoid referencing potentially failed context
+    contextType: 'new_topic',
+    confidence: 0.5,
+    reasoning: 'Fallback analysis due to error',
+    isRetry: false
+  };
   }
 }
 
