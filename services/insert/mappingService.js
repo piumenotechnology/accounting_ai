@@ -150,12 +150,12 @@ function mapSheetsData(allSheetsData) {
     // 'payment',
     // 'invoice',
     // 'ap',
-    // 'closed_deal',
+    // // 'closed_deal',
     'pl',
     'bs',
     'cash_flow',
     'try_sheet',
-    'TEST'
+    'test'
   ];
 
   for (const [sheetName, rows] of Object.entries(allSheetsData)) {
