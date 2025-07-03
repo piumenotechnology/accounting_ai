@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const cors = require('cors')
+const cron = require('node-cron');
 require('dotenv').config();
 // const { connectRedis } = require('./services/redisClient');
 
@@ -14,6 +15,10 @@ app.use(cors());
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+cron.schedule('* * * * *', () => {
+  console.log('Cron task is running every minute.');
+});
 
 // // API Routes
 app.use('/chat', chatRoutes);
