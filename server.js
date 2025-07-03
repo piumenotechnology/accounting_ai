@@ -9,6 +9,7 @@ require('dotenv').config();
 const chatRoutes = require('./routes/chatRoutes');
 const importRoutes = require('./routes/importRoutes');
 const authRoutes = require('./routes/authRoutes');
+const { runImportJob } = require('./controllers/importController');
 
 app.use(cors());
 
@@ -16,8 +17,18 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-cron.schedule('* * * * *', () => {
-  console.log('Cron task is running every minute.');
+// cron.schedule('* * * * *', () => {
+//   console.log('Cron task is running every minute.');
+//   handleImport();
+// });
+
+cron.schedule('0 */6 * * *', async () => {
+  console.log('🔁 Running cron import task every 6 hours...');
+  try {
+    await runImportJob();
+  } catch (err) {
+    console.error('❌ Cron import failed:', err.message);
+  }
 });
 
 // // API Routes

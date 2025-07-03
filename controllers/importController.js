@@ -12,6 +12,15 @@ async function handleImport(req, res) {
     const mappedData = mapSheetsData(rawData); // Map the data to the correct format
     await insertMappedData(mappedData); // Insert the mapped data into the database
 
+    // console.log('⚡ Starting Balance Sheet Import...');
+    // await insert_bs();
+
+    // console.log('⚡ Starting Profit and Loss Import...');
+    // await insert_pl();
+    
+    // console.log('⚡ Starting Cash Flow Import...');
+    // await insert_cash_flow();
+
     res.json({ message: '✅ Data imported successfully!' });
   } catch (error) {
     console.error('❌ Import Error:', error.message);
@@ -55,8 +64,44 @@ async function handleInsertCashFlow(req, res) {
   }
 } 
 
+// importController.js
+async function runImportJob() {
+  try {
+    console.log('⚡ Starting Import...');
 
-module.exports = { handleImport, 
+    const rawData = await fetchAllSheetsData();
+    const mappedData = mapSheetsData(rawData);
+    await insertMappedData(mappedData);
+
+    console.log('⚡ Starting Balance Sheet Import...');
+    await insert_bs();
+
+    console.log('⚡ Starting Profit and Loss Import...');
+    await insert_pl();
+
+    console.log('⚡ Starting Cash Flow Import...');
+    await insert_cash_flow();
+
+    console.log('✅ Data imported successfully!');
+  } catch (error) {
+    console.error('❌ Import Error:', error.message);
+    throw error;
+  }
+}
+
+// Optional: keep your Express handler
+async function handleImportALL(req, res) {
+  try {
+    await runImportJob();
+    res.json({ message: '✅ Data imported successfully!' });
+  } catch (error) {
+    res.status(500).json({ error: 'Import failed.' });
+  }
+}
+
+module.exports = { handleImport,
+                   handleImportALL,
+                   runImportJob,
                    handleInsertBS, 
                    handleInsertPL, 
                    handleInsertCashFlow,};
