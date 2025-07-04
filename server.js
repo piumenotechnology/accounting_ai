@@ -17,7 +17,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-cron.schedule('30 21 * * *', async () => {
+cron.schedule('* 22 * * *', async () => {
   console.log('🔁 Running cron import task every 6 hours...');
   try {
     await runImportJob();
