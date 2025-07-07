@@ -1,28 +1,10 @@
 const { openai } = require("../openaiService");
 const { runSQL } = require("../databaseService");
-// const fs = require('fs');
 
-const { 
-  getChatHistory, 
-  getSessionMetadata, 
-  setSessionMetadata,
-  clearFailedQueries,
-  getSuccessfulQueriesOnly 
-} = require("./memoryServicePostgres");
+const { chatHistory } = require("./chatHistory");
 
 // Import the table-specific prompts
 const { getTablePrompt, selectBestTable } = require('./tablePrompts');
-
-// function writeToLogFile(logMessage) {
-//   const timestamp = new Date().toISOString();
-//   const logEntry = `${timestamp} - ${logMessage}\n`;
-
-//   fs.appendFile('app.log', logEntry, (err) => {
-//     if (err) {
-//       console.error('Error writing to log file:', err);
-//     }
-//   });
-// };
 
 const tableDescriptions = {
   closed_deal: "Tracks closed sales deals such as sponsorships and delegate registrations.",
@@ -37,7 +19,7 @@ const tableDescriptions = {
 };
 
 // Enhanced conversation continuity detection with error handling
-async function analyzeContinuity(input, pastMessages, sessionMetadata) {
+async function analyzeContinuity(input, pastMessages, chatMetadata) {
   if (!pastMessages || pastMessages.length === 0) {
     return {
       isNewTopic: true,
@@ -58,8 +40,8 @@ async function analyzeContinuity(input, pastMessages, sessionMetadata) {
   const lastUserMessage = recentMessages.filter(m => m._getType?.() === 'human' || m.role === 'user').pop();
   const lastAiMessage = recentMessages.filter(m => m._getType?.() === 'ai' || m.role === 'assistant').pop();
 
-  const timeSinceLastQuery = sessionMetadata.last_updated ? 
-    (Date.now() - new Date(sessionMetadata.last_updated).getTime()) / (1000 * 60) : null;
+  const timeSinceLastQuery = chatMetadata.last_updated ? 
+    (Date.now() - new Date(chatMetadata.last_updated).getTime()) / (1000 * 60) : null;
 
   const continuityPrompt = [
     {
@@ -74,9 +56,9 @@ async function analyzeContinuity(input, pastMessages, sessionMetadata) {
 
         Context factors to consider:
         - Time gap: ${timeSinceLastQuery ? `${Math.round(timeSinceLastQuery)} minutes ago` : 'unknown'}
-        - Last successful table: ${sessionMetadata.last_successful_table || 'none'}
-        - Recent failures: ${sessionMetadata.recent_failures || 0}
-        - Last successful query: ${sessionMetadata.last_successful_query ? 'yes' : 'no'}
+        - Last successful table: ${chatMetadata.last_successful_table || 'none'}
+        - Recent failures: ${chatMetadata.recent_failures || 0}
+        - Last successful query: ${chatMetadata.last_successful_query ? 'yes' : 'no'}
 
         IMPORTANT: If this looks like a retry of a failed question, classify as "new_topic" to avoid referencing failed context.
 
@@ -98,7 +80,7 @@ async function analyzeContinuity(input, pastMessages, sessionMetadata) {
         Previous successful conversation context:
         Last user question: "${lastUserMessage?.content || 'None'}"
         Last AI response: "${lastAiMessage?.content?.substring(0, 200) || 'None'}..."
-        Recent failures count: ${sessionMetadata.recent_failures || 0}
+        Recent failures count: ${chatMetadata.recent_failures || 0}
         
         Current question: "${input}"
         
@@ -111,7 +93,7 @@ async function analyzeContinuity(input, pastMessages, sessionMetadata) {
     const analysis = JSON.parse(response.content);
     
     // Adjust confidence based on recent failures
-    if (sessionMetadata.recent_failures > 0) {
+    if (chatMetadata.recent_failures > 0) {
       analysis.confidence *= 0.8;
     }
     
@@ -133,8 +115,8 @@ async function analyzeContinuity(input, pastMessages, sessionMetadata) {
 }
 
 // Enhanced context building with error filtering
-function buildContextualPrompt(input, continuityAnalysis, pastMessages, sessionMetadata, selectedTable) {
-  const baseTablePrompt = getTablePrompt(selectedTable, input, sessionMetadata);
+function buildContextualPrompt(input, continuityAnalysis, pastMessages, chatMetadata, selectedTable) {
+  const baseTablePrompt = getTablePrompt(selectedTable, input, chatMetadata);
   
   // For new topics or retries, use clean table prompt
   if (continuityAnalysis.isNewTopic || continuityAnalysis.isRetry) {
@@ -275,8 +257,8 @@ function analyzeResults(results, question, tableName) {
 }
 
 // Main chain with enhanced error handling and recovery
-async function loadChain(session_id) {
-  const chatHistory = getChatHistory(session_id);
+async function loadChain(user_id, chat_id) {
+  const chathistory = chatHistory(user_id, chat_id);
 
   return async ({ input, table = null, retryCount = 0 }) => {
     const startTime = Date.now();
@@ -286,11 +268,11 @@ async function loadChain(session_id) {
 
     try {
       // Get only successful messages for context (filtered in PostgreSQL service)
-      const pastMessages = await getSuccessfulQueriesOnly(session_id);
-      const sessionMetadata = (await getSessionMetadata(session_id)) || {};
+      const pastMessages = await chathistory.getMessages(user_id, chat_id);
+      const chatMetadata = (await chathistory.getSuccessfulQueries(chat_id)) || {};
 
       // STEP 1: Analyze conversation continuity with error awareness
-      const continuityAnalysis = await analyzeContinuity(input, pastMessages, sessionMetadata);
+      const continuityAnalysis = await analyzeContinuity(input, pastMessages, chatMetadata);
       console.log("🔄 Continuity Analysis:", continuityAnalysis);
 
       // STEP 2: Enhanced table selection
@@ -298,13 +280,13 @@ async function loadChain(session_id) {
       if (!selectedTable) {
         if (!continuityAnalysis.isNewTopic && 
             !continuityAnalysis.isRetry &&
-            sessionMetadata.last_successful_table && 
+            chatMetadata.last_successful_table && 
             continuityAnalysis.confidence > 0.6) {
-          selectedTable = sessionMetadata.last_successful_table;
+          selectedTable = chatMetadata.last_successful_table;
           console.log("🔄 Using previous successful table:", selectedTable);
         } else {
           selectedTable = continuityAnalysis.suggestedTable || 
-                        await selectBestTable(input, pastMessages, sessionMetadata);
+                        await selectBestTable(input, pastMessages, chatMetadata);
         }
         console.log("🎯 Selected table:", selectedTable);
       }
@@ -314,7 +296,7 @@ async function loadChain(session_id) {
         input, 
         continuityAnalysis, 
         pastMessages, 
-        sessionMetadata, 
+        chatMetadata, 
         selectedTable
       );
 
@@ -367,7 +349,7 @@ CRITICAL REQUIREMENTS:
         console.warn("⚠️ SQL validation issues:", validation.issues);
         if (retryCount === 0) {
           // Try once more with validation feedback
-          return loadChain(session_id)({
+          return loadChain(user_id, chat_id)({
             input: `${input} (Previous attempt had issues: ${validation.issues.join(', ')})`,
             table: selectedTable,
             retryCount: retryCount + 1,
@@ -375,7 +357,9 @@ CRITICAL REQUIREMENTS:
         }
       }
 
-      console.log("🔍 Session ID:", session_id);
+      // console.log("🔍 Session ID:", session_id);
+      console.log("🔍 User ID:", user_id);
+      console.log("🔍 Chat ID:", chat_id);
       console.log("🔍 Selected table:", selectedTable);
       console.log("🔍 Input question:", input);
       console.log("⚡ Generated SQL:", sql);
@@ -398,9 +382,9 @@ CRITICAL REQUIREMENTS:
         console.error("❌ SQL Error:", sqlError);
         
         // Update failure tracking
-        await setSessionMetadata(session_id, {
-          ...sessionMetadata,
-          recent_failures: (sessionMetadata.recent_failures || 0) + 1,
+        await chathistory.setMetadata(user_id, chat_id, {
+          ...chatMetadata,
+          recent_failures: (chatMetadata.recent_failures || 0) + 1,
           last_error: sqlError,
           last_failed_sql: sql,
           last_updated: new Date().toISOString(),
@@ -409,7 +393,7 @@ CRITICAL REQUIREMENTS:
         // For SQL errors, try alternative approach on first retry
         if (retryCount === 0 && !sqlError.includes('timeout')) {
           console.log("🔄 Retrying with different approach...");
-          return loadChain(session_id)({
+          return loadChain(user_id, chat_id)({
             input: `Create a simpler query for: ${input}`,
             table: selectedTable,
             retryCount: retryCount + 1,
@@ -449,10 +433,10 @@ CRITICAL REQUIREMENTS:
         const message = `I couldn't find any data for that question in the ${selectedTable} table.\n\n${altResponse.content}`;
 
         // Save successful interaction (even if empty results)
-        await chatHistory.addUserMessage(input);
-        await chatHistory.addAIMessage(message);
-        await setSessionMetadata(session_id, {
-          ...sessionMetadata,
+        await chathistory.addUserMessage(input);
+        await chathistory.addAIMessage(message);
+        await chathistory.setMetadata(user_id, chat_id, {
+          ...chatMetadata,
           last_successful_table: selectedTable,
           last_query_empty: true,
           recent_failures: 0, // Reset failures on successful execution
@@ -488,10 +472,10 @@ CRITICAL REQUIREMENTS:
       const finalAnswer = summaryResponse.content.trim();
 
       // STEP 8: Save successful interaction
-      await chatHistory.addUserMessage(input);
-      await chatHistory.addAIMessage(finalAnswer);
-      await setSessionMetadata(session_id, {
-        ...sessionMetadata,
+      await chathistory.addUserMessage(input);
+      await chathistory.addAIMessage(finalAnswer);
+      await chathistory.setMetadata(user_id, chat_id, {
+        ...chatMetadata,
         last_successful_table: selectedTable,
         last_sql: sql,
         last_result_count: result?.length || 0,
@@ -499,16 +483,15 @@ CRITICAL REQUIREMENTS:
         recent_failures: 0, // Reset failures on success
         last_updated: new Date().toISOString(),
         continuity_analysis: continuityAnalysis,
-        conversation_turns: (sessionMetadata.conversation_turns || 0) + 1,
+        conversation_turns: (chatMetadata.conversation_turns || 0) + 1,
       });
 
       // Clear old failed queries periodically
-      if ((sessionMetadata.conversation_turns || 0) % 10 === 0) {
-        await clearFailedQueries(session_id);
+      if ((chatMetadata.conversation_turns || 0) % 10 === 0) {
+        await chathistory.clearFailedQueries(user_id, chat_id);
       }
 
       const executionTime = Date.now() - startTime;
-      // writeToLogFile(`SUCCESS - Session: ${session_id}, Time: ${executionTime}ms, SQL: ${sql}, Results: ${result.length} rows`);
 
       console.log("✅ Success:", finalAnswer);
       
@@ -553,9 +536,6 @@ CRITICAL REQUIREMENTS:
 
     } catch (error) {
       console.error("❌ Chain execution error:", error);
-      
-      // Log the failure
-      // writeToLogFile(`ERROR - Session: ${session_id}, Error: ${error.message}, SQL: ${sql || 'none'}, Retry: ${retryCount}`);
 
       // Don't save failed attempts to chat history to avoid contaminating future queries
       const errorMessage = retryCount > 0 ? 
@@ -565,7 +545,7 @@ CRITICAL REQUIREMENTS:
       // One retry with different strategy
       if (retryCount < 1) {
         console.log("🔄 Retrying with different strategy...");
-        return loadChain(session_id)({
+        return loadChain(user_id, chat_id)({
           input: `Please create a simple query to ${input}`,
           table: table,
           retryCount: retryCount + 1,

@@ -6,51 +6,51 @@ const {pgClient} = require('../databaseService');
 //   try {
 //     // Create chat_messages table
 //     await pgClient.query(`
-//       CREATE TABLE IF NOT EXISTS chat_messages (
-//         id SERIAL PRIMARY KEY,
-//         session_id VARCHAR(255) NOT NULL,
-//         role VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant', 'human', 'ai')),
-//         content TEXT NOT NULL,
-//         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-//         is_successful BOOLEAN DEFAULT true,
-//         has_error BOOLEAN DEFAULT false
-//       )
+      // CREATE TABLE IF NOT EXISTS chat_messages (
+      //   id SERIAL PRIMARY KEY,
+      //   session_id VARCHAR(255) NOT NULL,
+      //   role VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant', 'human', 'ai')),
+      //   content TEXT NOT NULL,
+      //   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      //   is_successful BOOLEAN DEFAULT true,
+      //   has_error BOOLEAN DEFAULT false
+      // )
 //     `);
 
 //     // Create session_metadata table
 //     await pgClient.query(`
-//       CREATE TABLE IF NOT EXISTS session_metadata (
-//         session_id VARCHAR(255) PRIMARY KEY,
-//         last_successful_table VARCHAR(100),
-//         last_sql TEXT,
-//         last_result_count INTEGER DEFAULT 0,
-//         last_execution_time INTEGER DEFAULT 0,
-//         recent_failures INTEGER DEFAULT 0,
-//         last_error TEXT,
-//         last_failed_sql TEXT,
-//         last_query_empty BOOLEAN DEFAULT false,
-//         continuity_analysis JSONB,
-//         conversation_turns INTEGER DEFAULT 0,
-//         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-//         last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-//       )
+      // CREATE TABLE IF NOT EXISTS session_metadata (
+      //   session_id VARCHAR(255) PRIMARY KEY,
+      //   last_successful_table VARCHAR(100),
+      //   last_sql TEXT,
+      //   last_result_count INTEGER DEFAULT 0,
+      //   last_execution_time INTEGER DEFAULT 0,
+      //   recent_failures INTEGER DEFAULT 0,
+      //   last_error TEXT,
+      //   last_failed_sql TEXT,
+      //   last_query_empty BOOLEAN DEFAULT false,
+      //   continuity_analysis JSONB,
+      //   conversation_turns INTEGER DEFAULT 0,
+      //   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      //   last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      // )
 //     `);
 
 //     // Create indexes for better performance
-//     await pgClient.query(`
-//       CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id 
-//       ON chat_messages(session_id)
-//     `);
+    // await pgClient.query(`
+    //   CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id 
+    //   ON chat_messages(session_id)
+    // `);
     
-//     await pgClient.query(`
-//       CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at 
-//       ON chat_messages(created_at)
-//     `);
+    // await pgClient.query(`
+    //   CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at 
+    //   ON chat_messages(created_at)
+    // `);
     
-//     await pgClient.query(`
-//       CREATE INDEX IF NOT EXISTS idx_chat_messages_successful 
-//       ON chat_messages(session_id, is_successful, created_at)
-//     `);
+    // await pgClient.query(`
+    //   CREATE INDEX IF NOT EXISTS idx_chat_messages_successful 
+    //   ON chat_messages(session_id, is_successful, created_at)
+    // `);
 
 //     console.log('✅ Database tables initialized successfully');
 //   } catch (error) {
