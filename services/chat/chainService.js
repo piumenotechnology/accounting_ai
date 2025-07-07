@@ -1,10 +1,8 @@
 const { openai } = require("../openaiService");
 const { runSQL } = require("../databaseService");
-
 const { chatHistory } = require("./chatHistory");
-
-// Import the table-specific prompts
-const { getTablePrompt, selectBestTable } = require('./tablePrompts');
+const { detectSmallTalk } = require("./detectSmallTalk");
+const { getTablePrompt, selectBestTable } = require("./tablePrompts");
 
 const tableDescriptions = {
   closed_deal: "Tracks closed sales deals such as sponsorships and delegate registrations.",
@@ -267,6 +265,28 @@ async function loadChain(user_id, chat_id) {
     let selectedTable = null;
 
     try {
+
+      // Step 0: Detect small talk and short greetings
+      const chitchatClassification = await detectSmallTalk(input);
+
+      if (chitchatClassification.type === "chitchat" && chitchatClassification.confidence > 0.7) {
+        const politeReply = "Hi there! How can I help you with your data today?";
+
+        await chathistory.addUserMessage(input);
+        await chathistory.addAIMessage(politeReply);
+
+        await chathistory.setMetadata(chat_id, {
+          ...(await chathistory.getSuccessfulQueries(chat_id)),
+          last_successful_table: null,
+          continuity_analysis: null
+        });
+
+        return {
+          type: "text",
+          content: politeReply
+        };
+      }
+
       // Get only successful messages for context (filtered in PostgreSQL service)
       const pastMessages = await chathistory.getMessages(user_id, chat_id);
       const chatMetadata = (await chathistory.getSuccessfulQueries(chat_id)) || {};

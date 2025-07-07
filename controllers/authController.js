@@ -36,7 +36,7 @@ const auth = {
                 return res.status(401).json({ error: 'Invalid email or password' });
             }
             const token = generateToken(user);
-            res.json({ user: { name: user.name, email: user.email }, token });
+            res.json({ user: { id: user.id, name: user.name, email: user.email }, token });
         } catch (error) {
             console.error('❌ Error during login:', error.message);
             res.status(500).json({ error: 'Login failed' });
