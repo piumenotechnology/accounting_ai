@@ -14,8 +14,20 @@ async function handleChat(req, res) {
 
     const chain = await loadChain(user_id, chat_id); // Load the chain for the session
     // const chain = await fastChain(session_id); // Load the chain for the session
+
+    if (!chain) {
+      return res.status(500).json({
+        error: 'Failed to load chat chain'
+      });
+    }
     
     const response = await chain({ input: message.toLowerCase(), table: table.toLowerCase() });
+
+    if (!response) {
+      return res.status(500).json({
+        error: 'Failed to get response from chat chain'
+      });
+    }
 
     res.json({ "data":response });
   } catch (error) {

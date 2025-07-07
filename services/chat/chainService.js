@@ -382,7 +382,7 @@ CRITICAL REQUIREMENTS:
         console.error("❌ SQL Error:", sqlError);
         
         // Update failure tracking
-        await chathistory.setMetadata(user_id, chat_id, {
+        await chathistory.setMetadata(chat_id, {
           ...chatMetadata,
           recent_failures: (chatMetadata.recent_failures || 0) + 1,
           last_error: sqlError,
@@ -435,7 +435,7 @@ CRITICAL REQUIREMENTS:
         // Save successful interaction (even if empty results)
         await chathistory.addUserMessage(input);
         await chathistory.addAIMessage(message);
-        await chathistory.setMetadata(user_id, chat_id, {
+        await chathistory.setMetadata(chat_id, {
           ...chatMetadata,
           last_successful_table: selectedTable,
           last_query_empty: true,
@@ -474,7 +474,7 @@ CRITICAL REQUIREMENTS:
       // STEP 8: Save successful interaction
       await chathistory.addUserMessage(input);
       await chathistory.addAIMessage(finalAnswer);
-      await chathistory.setMetadata(user_id, chat_id, {
+      await chathistory.setMetadata(chat_id, {
         ...chatMetadata,
         last_successful_table: selectedTable,
         last_sql: sql,

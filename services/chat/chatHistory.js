@@ -283,15 +283,18 @@ class ChatHistory {
     }
   }
   
-  async getMessages(limit = 50) {
+  async getMessages() {
     try {
+      // Ensure limit is a valid integer
+      const safeLimit = 50;
+
       const result = await pgClient.query(
         `SELECT role, content, created_at, is_successful, has_error 
-         FROM chat_messages_new 
-         WHERE user_id = $1 AND chat_id = $2
-         ORDER BY created_at DESC 
-         LIMIT $3`,
-        [this.user_id, this.chat_id, limit]
+        FROM chat_messages_new 
+        WHERE user_id = $1 AND chat_id = $2
+        ORDER BY created_at DESC 
+        LIMIT $3`,
+        [this.user_id, this.chat_id, safeLimit]
       );
 
       return result.rows.reverse().map(row => ({
@@ -308,15 +311,16 @@ class ChatHistory {
     }
   }
 
-  async getSuccessfulQueries(limit = 20) {
+
+  async getSuccessfulQueries() {
     try {
       const result = await pgClient.query(
         `SELECT role, content, created_at 
          FROM chat_messages_new 
          WHERE user_id = $1 AND chat_id = $2 AND is_successful = true AND has_error = false
          ORDER BY created_at DESC 
-         LIMIT $3`,
-        [this.user_id, this.chat_id, limit]
+         LIMIT 20`,
+        [this.user_id, this.chat_id]
       );
 
       return result.rows.reverse().map(row => ({
@@ -331,9 +335,9 @@ class ChatHistory {
     }
   }
 
-  async clearFailedQueries(olderThanMinutes = 60) {
+  async clearFailedQueries() {
     try {
-      const cutoffTime = new Date(Date.now() - olderThanMinutes * 60 * 1000);
+      const cutoffTime = new Date(Date.now() - 60 * 60 * 1000);
 
       const result = await pgClient.query(
         `DELETE FROM chat_messages_new 
@@ -344,7 +348,7 @@ class ChatHistory {
         [this.user_id, this.chat_id, cutoffTime]
       );
 
-      console.log(`🧹 Cleared ${result.rowCount} failed queries for Chat ${this.user_id}-${this.chat_id} older than ${olderThanMinutes} minutes.`);
+      console.log(`🧹 Cleared ${result.rowCount} failed queries for Chat ${this.user_id}-${this.chat_id} older than 60 minutes.`);
       return result.rowCount;
     } catch (error) {
       console.error('Error clearing failed queries:', error);
@@ -358,6 +362,8 @@ class ChatHistory {
         'SELECT * FROM chat_metadata WHERE chat_id = $1',
         [this.chat_id]
       );
+
+      console.log(`🔍 Retrieved metadata for Chat ${this.chat_id}:`, result);
 
       return result.rows.length ? result.rows[0] : null;
     } catch (error) {
