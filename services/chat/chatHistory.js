@@ -1,16 +1,16 @@
 // const { pgClient } = require('../databaseService');
 
 // class ChatHistory {
-//   constructor(user_id, chat_id) {
-//     this.user_id = user_id;
+//   constructor(user_email, chat_id) {
+//     this.user_email = user_email;
 //     this.chat_id = chat_id;
 //   }
 
 //   async addUserMessage(content) {
 //     try {
 //       await pgClient.query(
-//         'INSERT INTO chat_messages_new (user_id, chat_id, role, content, is_successful) VALUES ($1, $2, $3, $4, $5)',
-//         [this.user_id, this.chat_id, 'user', content, true]
+//         'INSERT INTO chat_messages_new (user_email, chat_id, role, content, is_successful) VALUES ($1, $2, $3, $4, $5)',
+//         [this.user_email, this.chat_id, 'user', content, true]
 //       );
 //     } catch (error) {
 //       console.error('Error adding user message:', error);
@@ -25,8 +25,8 @@
 //                        content.includes('encountered an error');
 
 //       await pgClient.query(
-//         'INSERT INTO chat_messages_new (user_id, chat_id, role, content, is_successful, has_error) VALUES ($1, $2, $3, $4, $5, $6)',
-//         [this.user_id, this.chat_id, 'assistant', content, isSuccessful && !hasError, hasError]
+//         'INSERT INTO chat_messages_new (user_email, chat_id, role, content, is_successful, has_error) VALUES ($1, $2, $3, $4, $5, $6)',
+//         [this.user_email, this.chat_id, 'assistant', content, isSuccessful && !hasError, hasError]
 //       );
 //     } catch (error) {
 //       console.error('Error adding AI message:', error);
@@ -39,10 +39,10 @@
 //       const result = await pgClient.query(
 //         `SELECT role, content, created_at, is_successful, has_error 
 //          FROM chat_messages_new 
-//          WHERE user_id = $1 AND chat_id = $2
+//          WHERE user_email = $1 AND chat_id = $2
 //          ORDER BY created_at DESC 
 //          LIMIT $3`,
-//         [this.user_id, this.chat_id, limit]
+//         [this.user_email, this.chat_id, limit]
 //       );
 
 //       return result.rows.reverse().map(row => ({
@@ -60,19 +60,19 @@
 //   }
 // }
 
-// function getChatHistory(user_id, chat_id) {
-//   return new ChatHistory(user_id, chat_id);
+// function getChatHistory(user_email, chat_id) {
+//   return new ChatHistory(user_email, chat_id);
 // }
 
-// async function getSuccessfulQueriesOnly(user_id, chat_id, limit = 20) {
+// async function getSuccessfulQueriesOnly(user_email, chat_id, limit = 20) {
 //   try {
 //     const result = await pgClient.query(
 //       `SELECT role, content, created_at 
 //        FROM chat_messages_new 
-//        WHERE user_id = $1 AND chat_id = $2 AND is_successful = true AND has_error = false
+//        WHERE user_email = $1 AND chat_id = $2 AND is_successful = true AND has_error = false
 //        ORDER BY created_at DESC 
 //        LIMIT $3`,
-//       [user_id, chat_id, limit]
+//       [user_email, chat_id, limit]
 //     );
 
 //     return result.rows.reverse().map(row => ({
@@ -110,7 +110,7 @@
 //   }
 // }
 
-// async function setChatMetadata(user_id, chat_id, metadata) {
+// async function setChatMetadata(user_email, chat_id, metadata) {
 //   try {
 //     const continuityAnalysisJson = metadata.continuity_analysis ? 
 //       JSON.stringify(metadata.continuity_analysis) : null;
@@ -155,20 +155,20 @@
 //   }
 // }
 
-// async function clearFailedQueries(user_id, chat_id, olderThanMinutes = 60) {
+// async function clearFailedQueries(user_email, chat_id, olderThanMinutes = 60) {
 //   try {
 //     const cutoffTime = new Date(Date.now() - olderThanMinutes * 60 * 1000);
     
 //     const result = await pgClient.query(
 //       `DELETE FROM chat_messages_new 
-//        WHERE user_id = $1 
+//        WHERE user_email = $1 
 //        AND chat_id = $2
 //        AND (has_error = true OR is_successful = false)
 //        AND created_at < $3`,
-//       [user_id, chat_id, cutoffTime]
+//       [user_email, chat_id, cutoffTime]
 //     );
     
-//     console.log(`🧹 Cleared ${result.rowCount} failed queries for Chat ${user_id }-${chat_id} older than ${olderThanMinutes} minutes.`);
+//     console.log(`🧹 Cleared ${result.rowCount} failed queries for Chat ${user_email }-${chat_id} older than ${olderThanMinutes} minutes.`);
 //     return result.rowCount;
 //   } catch (error) {
 //     console.error('Error clearing failed queries:', error);
@@ -176,11 +176,11 @@
 //   }
 // }
 
-// async function allChatHistory(user_id) {
+// async function allChatHistory(user_email) {
 //   try {
 //     const result = await pgClient.query(
-//       'SELECT * FROM chat_messages_new WHERE user_id = $1 ORDER BY created_at DESC',
-//       [user_id]
+//       'SELECT * FROM chat_messages_new WHERE user_email = $1 ORDER BY created_at DESC',
+//       [user_email]
 //     );
     
 //     return result.rows;
@@ -190,11 +190,11 @@
 //   }
 // }
 
-// async function chatHistory(user_id, chat_id) {
+// async function chatHistory(user_email, chat_id) {
 //   try {
 //     const result = await pgClient.query(
-//       'SELECT * FROM chat_messages_new WHERE user_id = $1 AND chat_id = $2',
-//       [user_id, chat_id]
+//       'SELECT * FROM chat_messages_new WHERE user_email = $1 AND chat_id = $2',
+//       [user_email, chat_id]
 //     );
 //     return result.rows; 
 //   } catch (error) {
@@ -203,13 +203,13 @@
 //   }
 // }
 
-// async function deleteChatHistory(user_id, chat_id) {
+// async function deleteChatHistory(user_email, chat_id) {
 //   try {
 //     const result = await pgClient.query(
-//       'DELETE FROM chat_messages_new WHERE user_id = $1 AND chat_id = $2',
-//       [user_id, chat_id]
+//       'DELETE FROM chat_messages_new WHERE user_email = $1 AND chat_id = $2',
+//       [user_email, chat_id]
 //     );
-//     console.log(`🗑️ Deleted ${result.rowCount} messages for Chat ${user_id}-${chat_id}`);
+//     console.log(`🗑️ Deleted ${result.rowCount} messages for Chat ${user_email}-${chat_id}`);
 //     // Optionally, delete metadata as well
 //     await pgClient.query(
 //       'DELETE FROM chat_metadata WHERE chat_id = $1',
@@ -238,16 +238,16 @@
 const { pgClient } = require('../databaseService');
 
 class ChatHistory {
-  constructor(user_id, chat_id) {
-    this.user_id = user_id;
+  constructor(user_email, chat_id) {
+    this.user_email = user_email;
     this.chat_id = chat_id;
   }
 
   async addUserMessage(content) {
     try {
       await pgClient.query(
-        'INSERT INTO chat_messages_new (user_id, chat_id, role, content, is_successful) VALUES ($1, $2, $3, $4, $5)',
-        [this.user_id, this.chat_id, 'user', content, true]
+        'INSERT INTO chat_messages_new (user_email, chat_id, role, content, is_successful) VALUES ($1, $2, $3, $4, $5)',
+        [this.user_email, this.chat_id, 'user', content, true]
       );
     } catch (error) {
       console.error('Error adding user message:', error);
@@ -262,8 +262,8 @@ class ChatHistory {
                        content.includes('encountered an error');
 
       await pgClient.query(
-        'INSERT INTO chat_messages_new (user_id, chat_id, role, content, is_successful, has_error) VALUES ($1, $2, $3, $4, $5, $6)',
-        [this.user_id, this.chat_id, 'assistant', content, isSuccessful && !hasError, hasError]
+        'INSERT INTO chat_messages_new (user_email, chat_id, role, content, is_successful, has_error) VALUES ($1, $2, $3, $4, $5, $6)',
+        [this.user_email, this.chat_id, 'assistant', content, isSuccessful && !hasError, hasError]
       );
     } catch (error) {
       console.error('Error adding AI message:', error);
@@ -274,8 +274,8 @@ class ChatHistory {
   async getAllMessages() {
     try {
       const result = await pgClient.query(
-        'SELECT * FROM chat_messages_new WHERE user_id = $1 ORDER BY created_at DESC',
-        [this.user_id])
+        'SELECT * FROM chat_messages_new WHERE user_email = $1 ORDER BY created_at DESC',
+        [this.user_email])
       return result.rows;
     } catch (error) { 
       console.error('Error retrieving all chat history:', error);
@@ -291,10 +291,10 @@ class ChatHistory {
       const result = await pgClient.query(
         `SELECT role, content, created_at, is_successful, has_error 
         FROM chat_messages_new 
-        WHERE user_id = $1 AND chat_id = $2
+        WHERE user_email = $1 AND chat_id = $2
         ORDER BY created_at DESC 
         LIMIT $3`,
-        [this.user_id, this.chat_id, safeLimit]
+        [this.user_email, this.chat_id, safeLimit]
       );
 
       return result.rows.reverse().map(row => ({
@@ -317,10 +317,10 @@ class ChatHistory {
       const result = await pgClient.query(
         `SELECT role, content, created_at 
          FROM chat_messages_new 
-         WHERE user_id = $1 AND chat_id = $2 AND is_successful = true AND has_error = false
+         WHERE user_email = $1 AND chat_id = $2 AND is_successful = true AND has_error = false
          ORDER BY created_at DESC 
          LIMIT 20`,
-        [this.user_id, this.chat_id]
+        [this.user_email, this.chat_id]
       );
 
       return result.rows.reverse().map(row => ({
@@ -341,14 +341,14 @@ class ChatHistory {
 
       const result = await pgClient.query(
         `DELETE FROM chat_messages_new 
-         WHERE user_id = $1 
+         WHERE user_email = $1 
          AND chat_id = $2
          AND (has_error = true OR is_successful = false)
          AND created_at < $3`,
-        [this.user_id, this.chat_id, cutoffTime]
+        [this.user_email, this.chat_id, cutoffTime]
       );
 
-      console.log(`🧹 Cleared ${result.rowCount} failed queries for Chat ${this.user_id}-${this.chat_id} older than 60 minutes.`);
+      console.log(`🧹 Cleared ${result.rowCount} failed queries for Chat ${this.user_email}-${this.chat_id} older than 60 minutes.`);
       return result.rowCount;
     } catch (error) {
       console.error('Error clearing failed queries:', error);
@@ -418,10 +418,10 @@ class ChatHistory {
   async deleteMessages() {
     try {
       const result = await pgClient.query(
-        'DELETE FROM chat_messages_new WHERE user_id = $1 AND chat_id = $2',
-        [this.user_id, this.chat_id]
+        'DELETE FROM chat_messages_new WHERE user_email = $1 AND chat_id = $2',
+        [this.user_email, this.chat_id]
       );
-      console.log(`🗑️ Deleted ${result.rowCount} messages for Chat ${this.user_id}-${this.chat_id}`);
+      console.log(`🗑️ Deleted ${result.rowCount} messages for Chat ${this.user_email}-${this.chat_id}`);
       return result.rowCount;
     } catch (error) {
       console.error('Error deleting chat messages:', error);
@@ -444,8 +444,8 @@ class ChatHistory {
   }
 }
 
-function chatHistory(user_id, chat_id) {
-  return new ChatHistory(user_id, chat_id);
+function chatHistory(user_email, chat_id) {
+  return new ChatHistory(user_email, chat_id);
 }
 
 module.exports = {

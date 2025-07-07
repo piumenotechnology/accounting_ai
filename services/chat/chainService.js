@@ -255,8 +255,8 @@ function analyzeResults(results, question, tableName) {
 }
 
 // Main chain with enhanced error handling and recovery
-async function loadChain(user_id, chat_id) {
-  const chathistory = chatHistory(user_id, chat_id);
+async function loadChain(user_email, chat_id) {
+  const chathistory = chatHistory(user_email, chat_id);
 
   return async ({ input, table = null, retryCount = 0 }) => {
     const startTime = Date.now();
@@ -288,7 +288,7 @@ async function loadChain(user_id, chat_id) {
       }
 
       // Get only successful messages for context (filtered in PostgreSQL service)
-      const pastMessages = await chathistory.getMessages(user_id, chat_id);
+      const pastMessages = await chathistory.getMessages(user_email, chat_id);
       const chatMetadata = (await chathistory.getSuccessfulQueries(chat_id)) || {};
 
       // STEP 1: Analyze conversation continuity with error awareness
@@ -369,7 +369,7 @@ CRITICAL REQUIREMENTS:
         console.warn("⚠️ SQL validation issues:", validation.issues);
         if (retryCount === 0) {
           // Try once more with validation feedback
-          return loadChain(user_id, chat_id)({
+          return loadChain(user_email, chat_id)({
             input: `${input} (Previous attempt had issues: ${validation.issues.join(', ')})`,
             table: selectedTable,
             retryCount: retryCount + 1,
@@ -378,7 +378,7 @@ CRITICAL REQUIREMENTS:
       }
 
       // console.log("🔍 Session ID:", session_id);
-      console.log("🔍 User ID:", user_id);
+      console.log("🔍 User ID:", user_email);
       console.log("🔍 Chat ID:", chat_id);
       console.log("🔍 Selected table:", selectedTable);
       console.log("🔍 Input question:", input);
@@ -413,7 +413,7 @@ CRITICAL REQUIREMENTS:
         // For SQL errors, try alternative approach on first retry
         if (retryCount === 0 && !sqlError.includes('timeout')) {
           console.log("🔄 Retrying with different approach...");
-          return loadChain(user_id, chat_id)({
+          return loadChain(user_email, chat_id)({
             input: `Create a simpler query for: ${input}`,
             table: selectedTable,
             retryCount: retryCount + 1,
@@ -508,7 +508,7 @@ CRITICAL REQUIREMENTS:
 
       // Clear old failed queries periodically
       if ((chatMetadata.conversation_turns || 0) % 10 === 0) {
-        await chathistory.clearFailedQueries(user_id, chat_id);
+        await chathistory.clearFailedQueries(user_email, chat_id);
       }
 
       const executionTime = Date.now() - startTime;
@@ -565,7 +565,7 @@ CRITICAL REQUIREMENTS:
       // One retry with different strategy
       if (retryCount < 1) {
         console.log("🔄 Retrying with different strategy...");
-        return loadChain(user_id, chat_id)({
+        return loadChain(user_email, chat_id)({
           input: `Please create a simple query to ${input}`,
           table: table,
           retryCount: retryCount + 1,

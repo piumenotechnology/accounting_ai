@@ -3,16 +3,16 @@ const { chatHistory } = require('../services/chat/chatHistory');
 
 async function handleChat(req, res) {
   try {
-    const { user_id, chat_id, message, table } = req.body;
+    const { user_email, chat_id, message, table } = req.body;
     // const { session_id, message, table } =  req.query;
 
-    if (!user_id || !chat_id || !message) {
+    if (!user_email || !chat_id || !message) {
       return res.status(400).json({
         error: 'Missing id or message'
       });
     }
 
-    const chain = await loadChain(user_id, chat_id); // Load the chain for the session
+    const chain = await loadChain(user_email, chat_id); // Load the chain for the session
     // const chain = await fastChain(session_id); // Load the chain for the session
 
     if (!chain) {
@@ -57,14 +57,14 @@ async function handleChat(req, res) {
 
 // async function getAllChatHistory(req, res) {
 //   try {
-//     const { user_id } = req.query;
+//     const { user_email } = req.query;
 
-//     if (!user_id) {
+//     if (!user_email) {
 //       return res.status(400).json({
-//         error: 'Missing user_id'
+//         error: 'Missing user_email'
 //       });
 //     }
-//     const history = await allChatHistory(user_id);
+//     const history = await allChatHistory(user_email);
 //     if (!history) {
 //       return res.status(404).json({
 //         error: 'Chat history not found'
@@ -81,14 +81,14 @@ async function handleChat(req, res) {
 
 // async function getChatHistory(req, res) {
 //   try {
-//     const { user_id, chat_id } = req.query;
+//     const { user_email, chat_id } = req.query;
 
-//     if (!user_id || !chat_id) {
+//     if (!user_email || !chat_id) {
 //       return res.status(400).json({
-//         error: 'Missing user_id or chat_id'
+//         error: 'Missing user_email or chat_id'
 //       });
 //     }
-//     const history = await chatHistory(user_id, chat_id);
+//     const history = await chatHistory(user_email, chat_id);
 //     if (!history) {
 //       return res.status(404).json({
 //         error: 'Chat history not found'
@@ -105,13 +105,13 @@ async function handleChat(req, res) {
 
 // async function deleteChat(req, res){
 //   try {
-//     const { user_id, chat_id} = req.query;
-//     if (!user_id || !chat_id) {
+//     const { user_email, chat_id} = req.query;
+//     if (!user_email || !chat_id) {
 //       return res.status(400).json({
-//         error: 'Missing user_id or chat_id'
+//         error: 'Missing user_email or chat_id'
 //       });
 //     }
-//     const deleted = await deleteChatHistory(user_id, chat_id);
+//     const deleted = await deleteChatHistory(user_email, chat_id);
 //     if (!deleted) {
 //       return res.status(404).json({
 //         error: 'Chat history not found'
@@ -131,13 +131,13 @@ async function handleChat(req, res) {
 // Get all chat messages for a user
 async function getAllChatHistory(req, res) {
   try {
-    const { user_id } = req.query;
+    const { user_email } = req.query;
 
-    if (!user_id) {
-      return res.status(400).json({ error: 'Missing user_id' });
+    if (!user_email) {
+      return res.status(400).json({ error: 'Missing user_email' });
     }
 
-    const chat = chatHistory(user_id, null); // null chat_id means all chats
+    const chat = chatHistory(user_email, null); // null chat_id means all chats
     const result = await chat.getAllMessages();
 
     if (!result.length) {
@@ -154,13 +154,13 @@ async function getAllChatHistory(req, res) {
 // Get messages for a specific chat
 async function getChatHistory(req, res) {
   try {
-    const { user_id, chat_id } = req.query;
+    const { user_email, chat_id } = req.query;
 
-    if (!user_id || !chat_id) {
-      return res.status(400).json({ error: 'Missing user_id or chat_id' });
+    if (!user_email || !chat_id) {
+      return res.status(400).json({ error: 'Missing user_email or chat_id' });
     }
 
-    const chat = chatHistory(user_id, chat_id);
+    const chat = chatHistory(user_email, chat_id);
     const messages = await chat.getMessages();
 
     if (!messages.length) {
@@ -177,13 +177,13 @@ async function getChatHistory(req, res) {
 // Delete a chat's messages and metadata
 async function deleteChat(req, res) {
   try {
-    const { user_id, chat_id } = req.query;
+    const { user_email, chat_id } = req.query;
 
-    if (!user_id || !chat_id) {
-      return res.status(400).json({ error: 'Missing user_id or chat_id' });
+    if (!user_email || !chat_id) {
+      return res.status(400).json({ error: 'Missing user_email or chat_id' });
     }
 
-    const chat = chatHistory(user_id, chat_id);
+    const chat = chatHistory(user_email, chat_id);
     const deletedMessages = await chat.deleteMessages();
     const deletedMetadata = await chat.deleteMetadata();
 
