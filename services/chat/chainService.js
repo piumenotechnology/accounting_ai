@@ -264,6 +264,8 @@ async function loadChain(user_email, chat_id) {
     let sql = null;
     let selectedTable = null;
 
+    const chatMetadata_id = `${user_email}-${chat_id}`;
+
     try {
 
       // Step 0: Detect small talk and short greetings
@@ -275,7 +277,7 @@ async function loadChain(user_email, chat_id) {
         await chathistory.addUserMessage(input);
         await chathistory.addAIMessage(politeReply);
 
-        await chathistory.setMetadata(chat_id, {
+        await chathistory.setMetadata({
           ...(await chathistory.getSuccessfulQueries(chat_id)),
           last_successful_table: null,
           continuity_analysis: null
@@ -402,7 +404,7 @@ CRITICAL REQUIREMENTS:
         console.error("❌ SQL Error:", sqlError);
         
         // Update failure tracking
-        await chathistory.setMetadata(chat_id, {
+        await chathistory.setMetadata({
           ...chatMetadata,
           recent_failures: (chatMetadata.recent_failures || 0) + 1,
           last_error: sqlError,
@@ -455,7 +457,7 @@ CRITICAL REQUIREMENTS:
         // Save successful interaction (even if empty results)
         await chathistory.addUserMessage(input);
         await chathistory.addAIMessage(message);
-        await chathistory.setMetadata(chat_id, {
+        await chathistory.setMetadata({
           ...chatMetadata,
           last_successful_table: selectedTable,
           last_query_empty: true,
@@ -494,7 +496,7 @@ CRITICAL REQUIREMENTS:
       // STEP 8: Save successful interaction
       await chathistory.addUserMessage(input);
       await chathistory.addAIMessage(finalAnswer);
-      await chathistory.setMetadata(chat_id, {
+      await chathistory.setMetadata({
         ...chatMetadata,
         last_successful_table: selectedTable,
         last_sql: sql,
