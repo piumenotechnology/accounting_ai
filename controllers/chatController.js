@@ -4,7 +4,6 @@ const { chatHistory } = require('../services/chat/chatHistory');
 async function handleChat(req, res) {
   try {
     const { user_email, chat_id, message, table } = req.body;
-    // const { session_id, message, table } =  req.query;
 
     if (!user_email || !chat_id || !message) {
       return res.status(400).json({

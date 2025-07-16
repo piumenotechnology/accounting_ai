@@ -1,4 +1,4 @@
-const pool = require('../config/db'); 
+const {pool} = require('../config/db'); 
 
 const authModels = {
     getUserByEmail: async (email) => {
@@ -13,9 +13,12 @@ const authModels = {
         }
     },
     createUser: async (userData) => {
-        const { name, email, password } = userData;
-        const query = 'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *';
-        const values = [name, email, password];
+        const { name, email, password, company_id } = userData;
+
+        console.log(userData)
+
+        const query = 'INSERT INTO users (name, email, password, company_id) VALUES ($1, $2, $3, $4) RETURNING *';
+        const values = [name, email, password, company_id];
         try {
             const result = await pool.query(query, values);
             return result.rows[0]; // Return the newly created user

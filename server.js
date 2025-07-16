@@ -6,10 +6,11 @@ require('dotenv').config();
 // const { connectRedis } = require('./services/redisClient');
 
 // Import Routes
+const { runImportJob } = require('./controllers/importController');
 const chatRoutes = require('./routes/chatRoutes');
 const importRoutes = require('./routes/importRoutes');
 const authRoutes = require('./routes/authRoutes');
-const { runImportJob } = require('./controllers/importController');
+const setupRoutes = require('./routes/setUpRoutes');
 
 app.use(cors());
 
@@ -30,6 +31,7 @@ cron.schedule('0 */2 * * *', async () => {
 app.use('/chat', chatRoutes);
 app.use('/import', importRoutes);
 app.use('/auth', authRoutes);
+app.use('/setup', setupRoutes);
 
 // Health Check
 app.get('/', (req, res) => {

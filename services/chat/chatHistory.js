@@ -1,4 +1,4 @@
-const { pgClient } = require('../databaseService');
+const { pool } = require('../../config/db');
 
 class ChatHistory {
   constructor(user_email, chat_id) {
@@ -9,7 +9,7 @@ class ChatHistory {
 
   async addUserMessage(content) {
     try {
-      await pgClient.query(
+      await pool.query(
         'INSERT INTO chat_messages_new (user_email, chat_id, role, content, is_successful) VALUES ($1, $2, $3, $4, $5)',
         [this.user_email, this.chat_id, 'user', content, true]
       );
@@ -25,7 +25,7 @@ class ChatHistory {
                        content.includes('SQL Error:') || 
                        content.includes('encountered an error');
 
-      await pgClient.query(
+      await pool.query(
         'INSERT INTO chat_messages_new (user_email, chat_id, role, content, is_successful, has_error) VALUES ($1, $2, $3, $4, $5, $6)',
         [this.user_email, this.chat_id, 'assistant', content, isSuccessful && !hasError, hasError]
       );
@@ -37,7 +37,7 @@ class ChatHistory {
 
   async getAllMessages() {
     try {
-      const result = await pgClient.query(
+      const result = await pool.query(
         'SELECT * FROM chat_messages_new WHERE user_email = $1 ORDER BY created_at DESC',
         [this.user_email])
       return result.rows;
@@ -52,7 +52,7 @@ class ChatHistory {
       // Ensure limit is a valid integer
       const safeLimit = 50;
 
-      const result = await pgClient.query(
+      const result = await pool.query(
         `SELECT role, content, created_at, is_successful, has_error 
         FROM chat_messages_new 
         WHERE user_email = $1 AND chat_id = $2
@@ -78,7 +78,7 @@ class ChatHistory {
 
   async getSuccessfulQueries() {
     try {
-      const result = await pgClient.query(
+      const result = await pool.query(
         `SELECT role, content, created_at 
          FROM chat_messages_new 
          WHERE user_email = $1 AND chat_id = $2 AND is_successful = true AND has_error = false
@@ -103,7 +103,7 @@ class ChatHistory {
     try {
       const cutoffTime = new Date(Date.now() - 60 * 60 * 1000);
 
-      const result = await pgClient.query(
+      const result = await pool.query(
         `DELETE FROM chat_messages_new 
          WHERE user_email = $1 
          AND chat_id = $2
@@ -122,7 +122,7 @@ class ChatHistory {
 
   async getMetadata() {
     try {
-      const result = await pgClient.query(
+      const result = await pool.query(
         'SELECT * FROM chat_metadata WHERE chat_meta_id = $1 ',
         [this.chat_meta_id]
       );
@@ -144,7 +144,7 @@ class ChatHistory {
 
       console.log(`🔧 Setting metadata for Chat ${this.chat_id}:`, metadata);
 
-      await pgClient.query(
+      await pool.query(
         `INSERT INTO chat_metadata (
           chat_meta_id, last_successful_table, last_sql, last_result_count,
           last_execution_time, recent_failures, last_error, last_failed_sql,
@@ -185,7 +185,7 @@ class ChatHistory {
 
   async deleteMessages() {
     try {
-      const result = await pgClient.query(
+      const result = await pool.query(
         'DELETE FROM chat_messages_new WHERE user_email = $1 AND chat_id = $2',
         [this.user_email, this.chat_id]
       );
@@ -199,7 +199,7 @@ class ChatHistory {
 
   async deleteMetadata() {
     try {
-      const result = await pgClient.query(
+      const result = await pool.query(
         'DELETE FROM chat_metadata WHERE chat_meta_id = $1',
         [this.chat_meta_id]
       );

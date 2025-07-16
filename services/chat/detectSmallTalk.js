@@ -1,5 +1,5 @@
 // services/chat/detectSmallTalk.js
-const { openai } = require("../openaiService");
+const { openai } = require("../../config/openai");
 
 async function detectSmallTalk(input) {
   const chitchatPrompt = [

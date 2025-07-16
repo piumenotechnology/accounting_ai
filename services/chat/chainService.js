@@ -1,5 +1,5 @@
-const { openai } = require("../openaiService");
-const { runSQL } = require("../databaseService");
+const { openai } = require("../../config/openai");
+const { runSQL } = require("../../config/db");
 const { chatHistory } = require("./chatHistory");
 const { detectSmallTalk } = require("./detectSmallTalk");
 const { getTablePrompt, selectBestTable } = require("./tablePrompts");
