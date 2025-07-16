@@ -1,11 +1,11 @@
-const {pgClient} = require('../databaseService');
+const {pool} = require('../../config/db');
 
 
 // async function initializeDatabase() {
 
 //   try {
 //     // Create chat_messages table
-//     await pgClient.query(`
+//     await pool.query(`
       // CREATE TABLE IF NOT EXISTS chat_messages (
       //   id SERIAL PRIMARY KEY,
       //   session_id VARCHAR(255) NOT NULL,
@@ -18,7 +18,7 @@ const {pgClient} = require('../databaseService');
 //     `);
 
 //     // Create session_metadata table
-//     await pgClient.query(`
+//     await pool.query(`
       // CREATE TABLE IF NOT EXISTS session_metadata (
       //   session_id VARCHAR(255) PRIMARY KEY,
       //   last_successful_table VARCHAR(100),
@@ -37,17 +37,17 @@ const {pgClient} = require('../databaseService');
 //     `);
 
 //     // Create indexes for better performance
-    // await pgClient.query(`
+    // await pool.query(`
     //   CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id 
     //   ON chat_messages(session_id)
     // `);
     
-    // await pgClient.query(`
+    // await pool.query(`
     //   CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at 
     //   ON chat_messages(created_at)
     // `);
     
-    // await pgClient.query(`
+    // await pool.query(`
     //   CREATE INDEX IF NOT EXISTS idx_chat_messages_successful 
     //   ON chat_messages(session_id, is_successful, created_at)
     // `);
@@ -66,7 +66,7 @@ class ChatHistory {
   }
   async addUserMessage(content) {
     try {
-      await pgClient.query(
+      await pool.query(
         'INSERT INTO chat_messages (session_id, role, content, is_successful) VALUES ($1, $2, $3, $4)',
         [this.sessionId, 'user', content, true]
       );
@@ -82,7 +82,7 @@ class ChatHistory {
                       content.includes('SQL Error:') || 
                       content.includes('encountered an error');
       
-      await pgClient.query(
+      await pool.query(
         'INSERT INTO chat_messages (session_id, role, content, is_successful, has_error) VALUES ($1, $2, $3, $4, $5)',
         [this.sessionId, 'assistant', content, isSuccessful && !hasError, hasError]
       );
@@ -94,7 +94,7 @@ class ChatHistory {
 
   async getMessages(limit = 50) {
     try {
-      const result = await pgClient.query(
+      const result = await pool.query(
         `SELECT role, content, created_at, is_successful, has_error 
          FROM chat_messages 
          WHERE session_id = $1 
@@ -132,7 +132,7 @@ async function getChatMessages(sessionId, limit = 50) {
 // Get only successful messages (filters out failed queries)
 async function getSuccessfulQueriesOnly(sessionId, limit = 20) {
   try {
-    const result = await pgClient.query(
+    const result = await pool.query(
       `SELECT role, content, created_at 
        FROM chat_messages 
        WHERE session_id = $1 AND is_successful = true AND has_error = false
@@ -156,7 +156,7 @@ async function getSuccessfulQueriesOnly(sessionId, limit = 20) {
 // Get session metadata
 async function getSessionMetadata(sessionId) {
   try {
-    const result = await pgClient.query(
+    const result = await pool.query(
       'SELECT * FROM session_metadata WHERE session_id = $1',
       [sessionId]
     );
@@ -185,7 +185,7 @@ async function setSessionMetadata(sessionId, metadata) {
     const continuityAnalysisJson = metadata.continuity_analysis ? 
       JSON.stringify(metadata.continuity_analysis) : null;
 
-    await pgClient.query(
+    await pool.query(
       `INSERT INTO session_metadata (
         session_id, last_successful_table, last_sql, last_result_count,
         last_execution_time, recent_failures, last_error, last_failed_sql,
@@ -230,7 +230,7 @@ async function clearFailedQueries(sessionId, olderThanMinutes = 60) {
   try {
     const cutoffTime = new Date(Date.now() - olderThanMinutes * 60 * 1000);
     
-    const result = await pgClient.query(
+    const result = await pool.query(
       `DELETE FROM chat_messages 
        WHERE session_id = $1 
        AND (has_error = true OR is_successful = false)
@@ -249,7 +249,7 @@ async function clearFailedQueries(sessionId, olderThanMinutes = 60) {
 // Get session statistics
 async function getSessionStats(sessionId) {
   try {
-    const result = await pgClient.query(
+    const result = await pool.query(
       `SELECT 
         COUNT(*) as total_messages,
         COUNT(*) FILTER (WHERE role = 'user') as user_messages,
@@ -279,13 +279,13 @@ async function cleanupOldSessions(daysOld = 1) {
     console.log(`🧹 Cleanup: Deleting sessions older than ${daysOld} days (cutoff: ${cutoffDate.toISOString()})`);
     
     // Delete old messages
-    const messageResult = await pgClient.query(
+    const messageResult = await pool.query(
       'DELETE FROM chat_messages WHERE created_at < $1',
       [cutoffDate]
     );
     
     // Delete old metadata
-    const metadataResult = await pgClient.query(
+    const metadataResult = await pool.query(
       'DELETE FROM session_metadata WHERE last_updated < $1',
       [cutoffDate]
     );

@@ -1,5 +1,5 @@
-// const { openai } = require("../openaiService");
-// const { runSQL } = require("../databaseService");
+// const { openai } = require("../../config/openai");
+// const { runSQL } = require("../../config/db");
 
 // const { 
 //   getChatHistory, 
@@ -353,8 +353,8 @@
 //   quickContinuityCheck: quickContinuityCheck,
 // };
 
-const { openai } = require("../openaiService");
-const { runSQL } = require("../databaseService");
+const { openai } = require("../../config/openai");
+const { runSQL } = require("../../config/db");
 
 const { 
   getChatHistory, 

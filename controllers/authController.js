@@ -1,19 +1,32 @@
-const { hashPassword, comparePasswords, generateToken } = require('../services/auth/tokenServices');
+const { hashPassword, comparePasswords, generateToken } = require('../services/secret/tokenServices');
 const authModels = require('../models/authModels');
+const { tokenModel } = require('../models/tokenModel')
+const { companyModels } = require('../models/companyModels')
 
 const auth = {
     register: async (req, res) => {
         try{
-            const { name, email, password } = req.body;
+            const { name, email, password, tokenCode } = req.body;
             if (!name || !email || !password) {
                 return res.status(400).json({ error: 'Name, email, and password are required' });
             }
+
+            const validTokenCode = await tokenModel.checkToken(tokenCode)
+            console.log(validTokenCode)
+            if(!validTokenCode){
+                return res.status(400).json({ error: 'invalid token' });
+            }
+
+            const getCompanyId = await companyModels.getCompanyBytoken(validTokenCode.id)
+            console.log(getCompanyId)
+            const company_id = getCompanyId.id
+
             const existingUser = await authModels.getUserByEmail(email);
             if (existingUser) {
                 return res.status(400).json({ error: 'User already exists' });
             }
             const hashedPassword = await hashPassword(password);
-            const newUser = await authModels.createUser({ name, email, password: hashedPassword });
+            const newUser = await authModels.createUser({ name, email, password: hashedPassword, company_id });
             const token = generateToken(newUser);
             res.status(201).json({ user: {name: newUser.name, email: newUser.email }, token });
         } catch (error) {
@@ -21,6 +34,7 @@ const auth = {
             res.status(500).json({ error: 'Registration failed' });
         }
     },
+
     login: async (req, res) => {
         try {
             const { email, password } = req.body;
@@ -42,6 +56,7 @@ const auth = {
             res.status(500).json({ error: 'Login failed' });
         }
     },
+
     getUser: async (req, res) => {
         try {
             const userId = req.user.id; // Assuming user ID is stored in req.user
@@ -55,6 +70,7 @@ const auth = {
             res.status(500).json({ error: 'Failed to fetch user' });
         }
     },
+
     updatePassword: async (req, res) => {
         try {
             const userId = req.user.id; 
@@ -78,6 +94,7 @@ const auth = {
             res.status(500).json({ error: 'Failed to update password' });
         }
     },
+
     deleteUser: async (req, res) => {
         try {
             const userId = req.user.id; 
@@ -91,6 +108,7 @@ const auth = {
             res.status(500).json({ error: 'Failed to delete user' });
         }
     },
+    
     getAllUsers: async (req, res) => {
         try {
             const users = await authModels.getAllUsers();
@@ -99,7 +117,7 @@ const auth = {
             console.error('❌ Error fetching all users:', error.message);
             res.status(500).json({ error: 'Failed to fetch users' });
         }
-    }   
+    }
 };
 
 module.exports = auth;
